@@ -1,0 +1,16 @@
+@import 'tailwindcss';
+
+:root {
+  --color-bg: 255 255 255;
+  --color-fg: 15 23 42;
+}
+
+.dark {
+  --color-bg: 15 23 42;
+  --color-fg: 241 245 249;
+}
+
+@theme inline {
+  --color-bg: rgb(var(--color-bg));
+  --color-fg: rgb(var(--color-fg));
+}

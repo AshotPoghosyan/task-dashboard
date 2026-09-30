@@ -1,0 +1,51 @@
+{
+  "name": "mr-task-dashboard",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20 <21"
+  },
+  "packageManager": "pnpm@9.15.9",
+  "scripts": {
+    "dev": "pnpm build:shared && concurrently -n server,web -c blue,green \"pnpm --filter @mrdash/server dev\" \"pnpm --filter @mrdash/web dev\"",
+    "build:shared": "pnpm --filter @mrdash/shared build",
+    "build": "pnpm -r build",
+    "test": "pnpm build:shared && pnpm -r test",
+    "lint": "eslint . && prettier --check .",
+    "format": "prettier --write .",
+    "typecheck": "pnpm build:shared && pnpm -r typecheck",
+    "db:migrate": "pnpm --filter @mrdash/server db:migrate",
+    "db:migrate:deploy": "pnpm --filter @mrdash/server db:migrate:deploy",
+    "db:seed": "pnpm --filter @mrdash/server db:seed",
+    "db:seed:large": "pnpm --filter @mrdash/server db:seed:large",
+    "e2e": "echo \"e2e not configured yet (later phase)\"",
+    "prepare": "simple-git-hooks"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "pnpm exec lint-staged"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,mjs,cjs}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml,css,html}": [
+      "prettier --write"
+    ]
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@types/node": "^26.6.3",
+    "concurrently": "^10.0.5",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.12.0",
+    "lint-staged": "^17.6.0",
+    "prettier": "^3.9.9",
+    "simple-git-hooks": "^2.14.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.71.0",
+    "vitest": "^5.0.3"
+  }
+}
