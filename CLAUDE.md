@@ -48,3 +48,14 @@ Deviations from spec: <none / list with reason>
 Known issues / follow-ups: <list>
 Commit: <hash>
 ```
+
+## Running as the GitHub agent (overrides anything above or in the prompts)
+- The GitHub repo already exists. Never run `gh repo create`.
+- `.github/workflows/claude.yml` and `ci.yml` already exist and are maintained by
+  the owner. Never create or edit files in `.github/workflows/`. If CI needs a
+  change, describe it in your phase report instead.
+- CI expects these root scripts (add them in Phase 1, even as no-ops until needed):
+  `lint`, `typecheck`, `test`, `build`, `db:migrate:deploy`.
+- Use pnpm 9. Commit `pnpm-lock.yaml`.
+- Work on your own branch and open a PR per phase. The owner merges it.
+- Post the phase report as your final comment on the issue/PR.

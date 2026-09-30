@@ -1,0 +1,94 @@
+name: Claude Agent
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  pull_request_review:
+    types: [submitted]
+  issues:
+    types: [opened, assigned]
+
+# One agent run at a time per issue/PR, so runs never overwrite each other
+concurrency:
+  group: claude-${{ github.event.issue.number || github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  claude:
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+      actions: read # lets Claude read CI results
+
+    # Real PostgreSQL 16 for migrations and integration tests
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app
+          POSTGRES_DB: mrdash
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U app"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      NODE_ENV: test
+      CI: "true"
+      DATABASE_URL: postgresql://app:app@localhost:5432/mrdash
+      DATABASE_URL_TEST: postgresql://app:app@localhost:5432/mrdash_test
+      APP_TIMEZONE: Asia/Yerevan
+      SESSION_SECRET: ci-only-not-a-real-secret-0123456789abcdef
+      GITLAB_WEBHOOK_SECRET: ci-gitlab-secret
+      GITHUB_WEBHOOK_SECRET: ci-github-secret
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0 # full history so the review prompt can diff phases
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install pnpm
+        run: npm install -g pnpm@9
+
+      - name: Create test database
+        run: PGPASSWORD=app psql -h localhost -U app -d mrdash -c "CREATE DATABASE mrdash_test;"
+
+      - name: Install dependencies (if project exists)
+        if: hashFiles('pnpm-lock.yaml') != ''
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Claude Code
+        uses: anthropics/claude-code-action@v1
+        with:
+          # Pro/Max subscription: run `claude setup-token` locally and save it
+          # as the CLAUDE_CODE_OAUTH_TOKEN secret.
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # Using an API key instead? Delete the line above and uncomment:
+          # anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+
+          claude_args: |
+            --max-turns 250
+            --allowedTools "Bash,Read,Write,Edit,MultiEdit,Glob,Grep,LS,TodoWrite,WebFetch"
+            --append-system-prompt "You are running in GitHub Actions. PostgreSQL 16 is available at localhost:5432 (DATABASE_URL and DATABASE_URL_TEST are set). Docker is not needed here. Follow CLAUDE.md strictly. Never edit files in .github/workflows. Run lint, typecheck, test and build before your final commit."
