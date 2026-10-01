@@ -1,39 +1,54 @@
 name: Auto PR
 
+# Runs after every Claude Agent run finishes. Claude's pushes do not trigger
+# workflows by themselves, so we react to the agent run completing instead.
 on:
-  push:
-    branches: ['claude/**']
+  workflow_run:
+    workflows: ["Claude Agent"]
+    types: [completed]
+  workflow_dispatch:
 
 concurrency:
-  group: auto-pr-${{ github.ref }}
+  group: auto-pr
   cancel-in-progress: false
 
 permissions:
   contents: read
   pull-requests: write
   issues: read
+  actions: write # needed to start CI on Claude branches
 
 jobs:
-  open-pr:
+  open-prs:
     runs-on: ubuntu-latest
     steps:
-      - name: Open PR for Claude branch (if none exists)
+      - name: Open PRs and start CI for Claude branches
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BRANCH: ${{ github.ref_name }}
           REPO: ${{ github.repository }}
         run: |
-          existing=$(gh pr list --repo "$REPO" --head "$BRANCH" --state open --json number --jq '.[0].number // empty')
-          if [ -n "$existing" ]; then
-            echo "PR #$existing already exists for $BRANCH"
-            exit 0
-          fi
-          issue=$(echo "$BRANCH" | sed -nE 's#^claude/issue-([0-9]+)-.*#\1#p')
-          if [ -n "$issue" ]; then
-            title=$(gh issue view "$issue" --repo "$REPO" --json title --jq .title)
-            body=$(printf 'Closes #%s\n\nOpened automatically from `%s`. The phase report is on issue #%s.' "$issue" "$BRANCH" "$issue")
-          else
-            title="Claude: $BRANCH"
-            body=$(printf 'Opened automatically from `%s`.' "$BRANCH")
-          fi
-          gh pr create --repo "$REPO" --head "$BRANCH" --base main --title "$title" --body "$body"
+          branches=$(gh api "repos/$REPO/branches" --paginate --jq '.[].name' | grep -E '^claude/issue-[0-9]+-' || true)
+          if [ -z "$branches" ]; then echo "No Claude branches."; exit 0; fi
+
+          for branch in $branches; do
+            issue=$(echo "$branch" | sed -nE 's#^claude/issue-([0-9]+)-.*#\1#p')
+            state=$(gh issue view "$issue" --repo "$REPO" --json state --jq .state 2>/dev/null || echo MISSING)
+            if [ "$state" != "OPEN" ]; then
+              echo "$branch: issue #$issue is $state, skipping."; continue
+            fi
+
+            pr_state=$(gh pr list --repo "$REPO" --head "$branch" --state all --json state --jq '.[0].state // empty')
+            if [ -z "$pr_state" ]; then
+              title=$(gh issue view "$issue" --repo "$REPO" --json title --jq .title)
+              body=$(printf 'Closes #%s\n\nOpened automatically from `%s`. The phase report is on issue #%s.' "$issue" "$branch" "$issue")
+              gh pr create --repo "$REPO" --head "$branch" --base main --title "$title" --body "$body"
+              pr_state=OPEN
+            fi
+
+            if [ "$pr_state" = "OPEN" ]; then
+              echo "$branch: starting CI on latest commit"
+              gh workflow run ci.yml --repo "$REPO" --ref "$branch"
+            else
+              echo "$branch: PR is $pr_state, skipping."
+            fi
+          done
