@@ -34,7 +34,11 @@ export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;
 export const linkMergeRequestSchema = z.object({ mergeRequestId: z.string().min(1) });
 export type LinkMergeRequestInput = z.infer<typeof linkMergeRequestSchema>;
 
-const q = z.string().trim().min(1).max(200).optional();
+// A blank `?q=` (cleared search box) means "no search", not a validation error.
+const q = z.preprocess(
+  (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+  z.string().trim().max(200).optional(),
+);
 
 export const taskFiltersSchema = paginationQuerySchema.extend({
   status: multiValue(taskStatusSchema),

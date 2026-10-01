@@ -30,6 +30,12 @@ describe('filters', () => {
     expect(taskFiltersSchema.safeParse({ status: 'BOGUS' }).success).toBe(false);
     expect(mergeRequestFiltersSchema.safeParse({ status: 'NO_MR' }).success).toBe(false);
   });
+  it('treats a blank q as absent but still caps length', () => {
+    expect(taskFiltersSchema.parse({ q: '' }).q).toBeUndefined();
+    expect(mergeRequestFiltersSchema.parse({ q: '   ' }).q).toBeUndefined();
+    expect(taskFiltersSchema.parse({ q: ' abc ' }).q).toBe('abc');
+    expect(taskFiltersSchema.safeParse({ q: 'x'.repeat(201) }).success).toBe(false);
+  });
   it('applies MR sort defaults', () => {
     const f = mergeRequestFiltersSchema.parse({});
     expect(f.sort).toBe('updatedAt');
