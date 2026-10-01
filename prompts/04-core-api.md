@@ -45,3 +45,25 @@ must fall back to username when the remote name is empty.
 
 Include these indexes in the EXPLAIN ANALYZE checks and confirm the list,
 filter and search queries use them.
+
+## Additional task: schema index improvements (from Phase 2 review)
+Do this first, in a new Prisma migration, before writing the repositories:
+
+MergeRequest:
+- add @@index([authorId])
+- add @@index([status, updatedAtRemote(sort: Desc)])
+- add @@index([repositoryId, updatedAtRemote(sort: Desc)])
+- replace @@index([updatedAtRemote(sort: Desc)]) with
+  @@index([updatedAtRemote(sort: Desc), id(sort: Desc)]) for stable cursor pagination
+  (always order by updatedAtRemote DESC, id DESC)
+
+Task:
+- add @@index([assigneeName])
+- add @@index([type])
+- replace @@index([parentId]) with @@index([parentId, sortOrder])
+
+Add to docs/DECISIONS.md: GitUser.displayName stays required; provider mappers
+must fall back to username when the remote name is empty.
+
+Include these indexes in the EXPLAIN ANALYZE checks and confirm the list,
+filter and search queries use them.
