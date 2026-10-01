@@ -48,7 +48,7 @@ jobs:
           name=$(head -1 "prompts/$file" | sed -E 's/^# Phase [0-9]+ *(—|–|-) *//')
           new_title="Phase $next – $name"
 
-          if gh issue list --repo "$REPO" --state open --search "\"Phase $next \" in:title" --json number --jq '.[0].number // empty' | grep -q .; then
+          if gh issue list --repo "$REPO" --state open --limit 200 --json title --jq '.[].title' | grep -qE "^Phase ${next}( |$)"; then
             echo "An open issue for phase $next already exists. Skipping."; exit 0
           fi
 
