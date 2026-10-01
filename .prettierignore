@@ -1,0 +1,9 @@
+node_modules
+dist
+coverage
+pnpm-lock.yaml
+.github
+prompts
+docs/SPEC.md
+HOW_TO_USE.md
+CLAUDE.md
