@@ -1,0 +1,56 @@
+name: Next Phase
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+jobs:
+  start-next-phase:
+    # Only when a Claude phase PR is merged (not just closed)
+    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'claude/issue-')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+
+      - name: Create the next phase issue
+        env:
+          # Issues created with a personal token trigger the Claude agent.
+          # (Issues created with the built-in GITHUB_TOKEN would not.)
+          GH_TOKEN: ${{ secrets.PHASE_BOT_TOKEN }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::PHASE_BOT_TOKEN secret is missing"; exit 1
+          fi
+
+          issue=$(echo "$BRANCH" | sed -nE 's#^claude/issue-([0-9]+)-.*#\1#p')
+          title=$(gh issue view "$issue" --repo "$REPO" --json title --jq .title)
+          current=$(echo "$title" | sed -nE 's#^Phase ([0-9]+).*#\1#p')
+          if [ -z "$current" ]; then
+            echo "Issue #$issue is not a phase issue ('$title'). Nothing to do."; exit 0
+          fi
+
+          next=$((current + 1))
+          file=$(ls prompts/ | grep -E "^0*${next}-.*\.md$" | head -1)
+          if [ -z "$file" ]; then
+            echo "No prompt for phase $next. Build finished."; exit 0
+          fi
+
+          name=$(head -1 "prompts/$file" | sed -E 's/^# Phase [0-9]+ *(—|–|-) *//')
+          new_title="Phase $next – $name"
+
+          if gh issue list --repo "$REPO" --state open --search "\"Phase $next \" in:title" --json number --jq '.[0].number // empty' | grep -q .; then
+            echo "An open issue for phase $next already exists. Skipping."; exit 0
+          fi
+
+          body=$(printf '@claude Execute prompts/%s. Open a PR when done.\n\nStarted automatically after phase %s was merged.' "$file" "$current")
+          gh issue create --repo "$REPO" --title "$new_title" --body "$body"
