@@ -24,6 +24,7 @@ MVP. Follow this spec exactly. It is the source of truth.
 ## 1. Goal
 
 An internal dashboard that:
+
 - Tracks features/tasks and their nested sub-bugs.
 - Pulls merge requests from GitLab and pull requests from GitHub (API sync + webhooks).
 - Updates statuses automatically and pushes changes to open browsers in real time.
@@ -69,6 +70,7 @@ mr-task-dashboard/
 ## 3. Tech stack (fixed, do not substitute)
 
 **Backend (`apps/server`)**
+
 - Node.js 20, TypeScript, **Fastify** (with `@fastify/helmet`, `@fastify/cors`,
   `@fastify/rate-limit`, `@fastify/sensible`)
 - **PostgreSQL 16** via Docker Compose
@@ -79,6 +81,7 @@ mr-task-dashboard/
 - Real time: **Server-Sent Events** (`GET /api/events`)
 
 **Frontend (`apps/web`)**
+
 - React 18, Vite, TypeScript
 - Tailwind CSS (latest stable) with design tokens as CSS variables
 - **TanStack Query** (server state), **TanStack Table** (tables),
@@ -88,6 +91,7 @@ mr-task-dashboard/
 - lucide-react icons, date-fns (+ date-fns-tz)
 
 **Testing**
+
 - Vitest (server + web + shared)
 - Fastify `inject` for API tests
 - Testing Library for components
@@ -99,6 +103,7 @@ mr-task-dashboard/
 ## 4. Architecture
 
 ### Backend layering (strict, one direction only)
+
 ```
 routes (HTTP, validation) → services (business logic) → repositories (Prisma only)
                                    ↓
@@ -106,6 +111,7 @@ routes (HTTP, validation) → services (business logic) → repositories (Prisma
                     jobs (pg-boss workers)
                     events (in-process event bus → SSE)
 ```
+
 - Routes never touch Prisma directly. Repositories contain no business logic.
 - All external API access goes through `providers/`.
 
@@ -156,6 +162,7 @@ Store all timestamps as `timestamptz` in UTC. Use `cuid`/`uuid` primary keys for
 entities. Add `createdAt` and `updatedAt` to every table.
 
 ### Enums
+
 - `Provider`: GITLAB, GITHUB
 - `MrStatus`: DRAFT, OPEN, IN_REVIEW, MERGED, CLOSED
 - `TaskType`: FEATURE, TASK, BUG
@@ -163,16 +170,20 @@ entities. Add `createdAt` and `updatedAt` to every table.
 - `SyncStatus`: RUNNING, SUCCESS, FAILED
 
 ### Tables
+
 **repositories**
+
 - id, provider, externalId (GitLab project id / GitHub `owner/repo`), fullPath, webUrl,
   defaultBranch, isActive, lastSyncedAt
 - UNIQUE(provider, externalId)
 
 **git_users**
+
 - id, provider, externalId, username, displayName, avatarUrl
 - UNIQUE(provider, externalId)
 
 **merge_requests**
+
 - id, repositoryId (FK), provider, externalId, number (iid / PR number), title,
   description, status, isDraft, sourceBranch, targetBranch, url, authorId (FK git_users),
   assigneeId (FK git_users, nullable), createdAtRemote, updatedAtRemote, mergedAt, closedAt
@@ -182,25 +193,30 @@ entities. Add `createdAt` and `updatedAt` to every table.
 - GIN trigram index on title (enable `pg_trgm` in a migration) for fast search
 
 **merge_request_reviewers** (join)
+
 - mergeRequestId, gitUserId, state (REQUESTED, APPROVED, CHANGES_REQUESTED)
 - PK(mergeRequestId, gitUserId)
 
 **tasks**
+
 - id, title, type, status, statusOverride (nullable, manual override), assigneeName,
   targetBranch, notes, parentId (self FK, nullable, ON DELETE CASCADE), sortOrder
 - INDEX(parentId), INDEX(status), INDEX(targetBranch), trigram index on title
 - Rule enforced in service layer: max one level of nesting (a sub-bug cannot have children)
 
 **task_merge_requests** (join, a task can have several MRs)
+
 - taskId, mergeRequestId, PK(taskId, mergeRequestId)
 
 **webhook_events**
+
 - id, provider, deliveryId (GitLab `X-Gitlab-Event-UUID` / GitHub `X-GitHub-Delivery`),
   eventType, receivedAt, processedAt, error, payload (jsonb)
 - UNIQUE(provider, deliveryId)
 - Retention: job deletes rows older than 30 days
 
 **sync_runs**
+
 - id, repositoryId, status, startedAt, finishedAt, itemsFetched, itemsUpserted, error
 
 Seed script (`pnpm db:seed`): 2 repos, 8 users, ~40 MRs across all statuses,
@@ -212,7 +228,9 @@ creates 10,000 MRs and 2,000 tasks for performance testing.
 ## 6. Status rules (in `packages/shared`, fully unit tested)
 
 ### MR status mapping
+
 **GitLab** (`state`, `draft`, reviewers):
+
 - merged → MERGED
 - closed → CLOSED
 - opened + draft → DRAFT
@@ -220,6 +238,7 @@ creates 10,000 MRs and 2,000 tasks for performance testing.
 - opened otherwise → OPEN
 
 **GitHub** (`state`, `merged_at`, `draft`, requested reviewers / reviews):
+
 - merged_at set → MERGED
 - closed → CLOSED
 - open + draft → DRAFT
@@ -227,6 +246,7 @@ creates 10,000 MRs and 2,000 tasks for performance testing.
 - open otherwise → OPEN
 
 ### Task status aggregation (from linked MRs)
+
 - `statusOverride` set → use it
 - No linked MRs → NO_MR
 - All linked MRs MERGED → MERGED
@@ -240,6 +260,7 @@ creates 10,000 MRs and 2,000 tasks for performance testing.
 ## 7. Integrations
 
 ### Provider interface
+
 ```ts
 interface GitProvider {
   listMergeRequests(repo: Repository, updatedSince?: Date): AsyncIterable<NormalizedMR>;
@@ -249,6 +270,7 @@ interface GitProvider {
 ```
 
 ### Sync
+
 - pg-boss job per active repository every `SYNC_INTERVAL_MINUTES` (default 5).
 - First run: full sync. Later runs: incremental (`updated_after` on GitLab, `sort=updated`
   plus stop when older than last sync on GitHub).
@@ -259,6 +281,7 @@ interface GitProvider {
 - Missing token for a provider → skip with a warning, never crash.
 
 ### Webhooks
+
 - `POST /api/webhooks/gitlab` and `POST /api/webhooks/github`
   (keep `/api/gitlab-webhook` as an alias of the GitLab route).
 - GitLab: verify `X-Gitlab-Token` against `GITLAB_WEBHOOK_SECRET` using constant-time compare.
@@ -298,6 +321,7 @@ All responses validated with shared Zod schemas. Errors use one shape:
   with a heartbeat every 25s
 
 ### Access control (MVP)
+
 - If `DASHBOARD_PASSWORD` is set, require login: a simple password form issues an
   httpOnly, secure, sameSite=strict session cookie signed with `SESSION_SECRET`.
 - Webhook routes are exempt (they use signatures instead).
@@ -308,6 +332,7 @@ All responses validated with shared Zod schemas. Errors use one shape:
 ## 9. UI / UX design
 
 ### Visual language
+
 - Dark mode only. Calm, dense, professional. Reference quality: Linear, Vercel dashboard.
 - Tokens in `styles/tokens.css`, mapped into the Tailwind theme:
   - Background `#0B0D12`, surface `#12151C`, raised `#181C25`, border `#232837`
@@ -322,12 +347,14 @@ All responses validated with shared Zod schemas. Errors use one shape:
 - Motion: 150ms ease-out for expand/collapse and hovers. Respect `prefers-reduced-motion`.
 
 ### Layout
+
 - App shell: collapsible left sidebar (Tasks, Merge Requests, Sync status),
   top bar with global search and a sync indicator.
 - Responsive: full layout ≥ 1024px. On tablet/mobile the sidebar becomes a drawer and
   tables drop low-priority columns (branch, dates) into the expanded row.
 
 ### Tasks page (`/`)
+
 - Stat cards row: Total Open MRs, Pending Reviews, Merged Today (+ small secondary
   line such as "3 more than yesterday" when available). Clicking a card applies that filter.
 - Filter bar: search (debounced 250ms, `/` shortcut focuses it), multi-select filters
@@ -342,6 +369,7 @@ All responses validated with shared Zod schemas. Errors use one shape:
 - "New task" button opens a dialog form with validation.
 
 ### Merge Requests page (`/merge-requests`)
+
 - Stat cards per status. Filter bar: provider, repo, status, author, assignee,
   reviewer, target branch, search.
 - Virtualized table: provider icon, repo, !number / #number, title, author, reviewers
@@ -350,6 +378,7 @@ All responses validated with shared Zod schemas. Errors use one shape:
 - "Sync now" button with last-synced time and per-repo errors in a popover.
 
 ### States and polish
+
 - Skeleton loaders that match the final layout (no layout shift).
 - Designed empty states (e.g. "No merge requests match these filters", plus a clear-filters action).
 - Error states with retry. Toast notifications for mutations and live updates.
@@ -364,6 +393,7 @@ All responses validated with shared Zod schemas. Errors use one shape:
 ## 10. Performance requirements (measured, not assumed)
 
 **Backend**
+
 - `GET /api/merge-requests` and `GET /api/tasks` p95 < 100ms locally with the large seed.
 - No N+1 queries: use Prisma `include`/`select` deliberately and select only needed columns.
 - Verify with `EXPLAIN ANALYZE` that list/filter/search queries use indexes. Document
@@ -372,6 +402,7 @@ All responses validated with shared Zod schemas. Errors use one shape:
 - `/api/stats` cached in memory for 10s and invalidated on MR events.
 
 **Frontend**
+
 - Initial JS < 200KB gzipped. Routes code-split with `React.lazy`.
   Add `rollup-plugin-visualizer` report.
 - Tables virtualized: 10,000 rows scroll at 60fps.
@@ -436,15 +467,15 @@ production Dockerfiles for server and web, `docker-compose.prod.yml`.
 
 ## 12. Testing strategy summary
 
-| Layer | Tool | What |
-|---|---|---|
-| Shared logic | Vitest | Status mapping, aggregation, schemas |
-| Repositories/services | Vitest + real Postgres | Queries, transactions, upserts |
-| API | Fastify inject | Every route, auth, errors, pagination |
-| Providers | Vitest + fixtures | Mapping, pagination, backoff |
-| Webhooks | Fastify inject + fixtures | Signatures, idempotency, processing |
-| Components | Testing Library | Badges, filters, rows, drawer, forms |
-| E2E | Playwright | Critical user flows |
+| Layer                 | Tool                      | What                                  |
+| --------------------- | ------------------------- | ------------------------------------- |
+| Shared logic          | Vitest                    | Status mapping, aggregation, schemas  |
+| Repositories/services | Vitest + real Postgres    | Queries, transactions, upserts        |
+| API                   | Fastify inject            | Every route, auth, errors, pagination |
+| Providers             | Vitest + fixtures         | Mapping, pagination, backoff          |
+| Webhooks              | Fastify inject + fixtures | Signatures, idempotency, processing   |
+| Components            | Testing Library           | Badges, filters, rows, drawer, forms  |
+| E2E                   | Playwright                | Critical user flows                   |
 
 - Coverage target: ≥ 80% lines on `apps/server/src/services` and `packages/shared`.
 - CI (GitHub Actions): install with cache → lint → typecheck → unit + integration

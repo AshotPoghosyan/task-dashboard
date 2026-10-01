@@ -3,6 +3,7 @@
 Read: CLAUDE.md, docs/SPEC.md sections 5 and 6.
 
 Tasks:
+
 1. Prisma schema for every table in section 5: enums, relations, unique constraints,
    indexes, cascade rules, createdAt/updatedAt everywhere, timestamptz.
 2. Migration enabling `pg_trgm` and adding GIN trigram indexes on
@@ -16,6 +17,7 @@ Tasks:
 7. Add an ER diagram (Mermaid) to docs/ARCHITECTURE.md.
 
 Acceptance:
+
 - Migrations apply cleanly on an empty database and are reversible by reset.
 - Both seeds run. A test verifies unique constraints and the parent cascade delete.
 

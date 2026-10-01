@@ -3,6 +3,7 @@
 Read: CLAUDE.md, docs/SPEC.md section 9 (Tasks page, States and polish), 10 (frontend).
 
 Tasks:
+
 1. Stat cards (Total Open MRs, Pending Reviews, Merged Today); clicking applies a filter.
 2. Filter bar: debounced search with `/` shortcut; multi-select status, assignee,
    target branch, type; chips; clear all; state in URL.
@@ -16,6 +17,7 @@ Tasks:
 7. Keyboard: j/k, Enter, Esc, e.
 
 Acceptance:
+
 - Component tests: expand/collapse, filter → URL sync, drawer notes autosave,
   form validation.
 - Expanding a row re-renders only that row (verify with React Profiler, note result).

@@ -5,6 +5,7 @@ Read CLAUDE.md, the relevant docs/SPEC.md sections, and the diff of the last pha
 (`git log` / `git diff` since the previous phase commit).
 
 Check and report:
+
 1. Spec compliance: anything missing or different from the spec.
 2. Architecture rule violations (layering, duplicated shared logic, hardcoded config).
 3. Bugs and edge cases: timezones, null handling, race conditions, transactions.

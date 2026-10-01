@@ -3,6 +3,7 @@
 Read: CLAUDE.md, docs/SPEC.md sections 13, 14, 15.
 
 Tasks:
+
 1. README: what it is, screenshots, setup in ≤ 5 commands, env var table,
    scripts, troubleshooting.
 2. docs/ARCHITECTURE.md final: Mermaid diagrams (system, data flow for sync and
