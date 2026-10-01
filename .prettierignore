@@ -3,3 +3,7 @@ dist
 coverage
 pnpm-lock.yaml
 .github
+CLAUDE.md
+HOW_TO_USE.md
+docs/SPEC.md
+prompts

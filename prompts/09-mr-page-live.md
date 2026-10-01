@@ -3,7 +3,6 @@
 Read: CLAUDE.md, docs/SPEC.md section 9 (Merge Requests page, States and polish), 10.
 
 Tasks:
-
 1. Stat cards per status. Filter bar: provider, repo, status, author, assignee,
    reviewer, target branch, search.
 2. Virtualized MR table with all columns from spec; reviewer avatar stack with
@@ -14,7 +13,6 @@ Tasks:
    highlight updated rows briefly; toast on status change.
 
 Acceptance:
-
 - 10,000-row large seed scrolls smoothly (no dropped frames in a Performance trace; note result).
 - Manual check documented: curl a webhook fixture → row updates live in the browser.
 - Component tests for filters and SSE invalidation logic.

@@ -3,7 +3,6 @@
 Read: CLAUDE.md, docs/SPEC.md sections 7 (Provider interface, Sync), 13.
 
 Tasks:
-
 1. `providers/types.ts`: GitProvider interface and NormalizedMR.
 2. GitLab provider: REST v4 client (base URL from env), pagination,
    `updated_after` incremental fetch, mapper to NormalizedMR incl. reviewers.
@@ -17,7 +16,6 @@ Tasks:
 7. Missing token → provider skipped with a warning. One repo failing never blocks others.
 
 Acceptance:
-
 - Adapter tests use recorded JSON fixtures in `__fixtures__/` (no live network calls).
 - Tests: multi-page pagination, incremental sync, 429 backoff, missing token,
   failed repo isolation, idempotent re-sync (no duplicates).

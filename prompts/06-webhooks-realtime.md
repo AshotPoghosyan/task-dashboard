@@ -3,7 +3,6 @@
 Read: CLAUDE.md, docs/SPEC.md sections 7 (Webhooks), 8 (events).
 
 Tasks:
-
 1. `POST /api/webhooks/gitlab` (+ alias `/api/gitlab-webhook`) and
    `POST /api/webhooks/github`. Raw body access for signature checks.
 2. Verification: GitLab token (constant-time), GitHub `X-Hub-Signature-256` HMAC.
@@ -17,7 +16,6 @@ Tasks:
    secrets, local tunneling with ngrok or cloudflared, curl examples per fixture.
 
 Acceptance:
-
 - Fixtures for GitLab (open, draft, reviewer added, merged, closed) and GitHub
   (opened, draft, review_requested, closed+merged, closed-not-merged).
 - Tests: valid/invalid signature, duplicate delivery, irrelevant event type,

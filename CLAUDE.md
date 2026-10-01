@@ -4,7 +4,6 @@ Project: MR & Task Tracking Dashboard. The full specification is `docs/SPEC.md`.
 It is the source of truth. Read the sections a task references before writing code.
 
 ## How we work
-
 - Work only on the phase you were given. Do not start later phases.
 - Do not ask questions. If the spec does not cover something, choose the simplest
   robust option and add an entry to `docs/DECISIONS.md` (date, decision, reason).
@@ -14,14 +13,12 @@ It is the source of truth. Read the sections a task references before writing co
 - Finish every phase with the report format below.
 
 ## Stack (fixed)
-
 pnpm workspaces · Node 20 · TypeScript strict · Fastify · PostgreSQL 16 · Prisma ·
 Zod · pg-boss · pino · SSE · React 18 + Vite · Tailwind · TanStack Query/Table/Virtual ·
 React Router · Radix UI · Vitest · Testing Library · Playwright.
 Do not add or swap libraries without logging it in DECISIONS.md.
 
 ## Architecture rules
-
 - Backend flow: routes → services → repositories. Routes never import Prisma.
   Repositories contain no business logic. External APIs only via `providers/`.
 - Shared Zod schemas, enums, and status logic live in `packages/shared` and are
@@ -31,7 +28,6 @@ Do not add or swap libraries without logging it in DECISIONS.md.
 - Timestamps stored in UTC; display in `APP_TIMEZONE`.
 
 ## Code quality
-
 - Tests next to code (`*.test.ts`) or in `__tests__`. Every bug fix gets a regression test.
 - Integration tests use the real Postgres test database, never mocks of Prisma.
 - No `console.log` in committed code; use the pino logger.
@@ -39,12 +35,10 @@ Do not add or swap libraries without logging it in DECISIONS.md.
   keyboard support.
 
 ## Commands
-
 - `pnpm dev` · `pnpm test` · `pnpm lint` · `pnpm typecheck` · `pnpm build`
 - `pnpm db:migrate` · `pnpm db:seed` · `pnpm db:seed:large` · `pnpm e2e`
 
 ## Phase report format
-
 ```
 ## Phase N report
 Done: <what was built>
@@ -56,7 +50,6 @@ Commit: <hash>
 ```
 
 ## Running as the GitHub agent (overrides anything above or in the prompts)
-
 - The GitHub repo already exists. Never run `gh repo create`.
 - `.github/workflows/claude.yml` and `ci.yml` already exist and are maintained by
   the owner. Never create or edit files in `.github/workflows/`. If CI needs a

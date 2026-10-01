@@ -3,7 +3,6 @@
 Read: CLAUDE.md, docs/SPEC.md sections 10, 12.
 
 Tasks:
-
 1. Playwright E2E: login, filter + search tasks, expand sub-bugs, edit notes,
    create task, webhook fixture updates UI live, MR page filters + infinite scroll.
 2. Axe checks inside E2E for both pages.

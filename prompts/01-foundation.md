@@ -3,7 +3,6 @@
 Read: CLAUDE.md, docs/SPEC.md sections 0, 2, 3, 4, 13.
 
 Tasks:
-
 1. The repo already exists with CLAUDE.md, docs/, prompts/ and .github/workflows/.
    Do not recreate it and do not touch .github/workflows/.
 2. Set up the pnpm monorepo exactly as the folder structure in section 2
@@ -20,7 +19,6 @@ Tasks:
 9. Create empty docs/DECISIONS.md and docs/ARCHITECTURE.md.
 
 Acceptance:
-
 - `pnpm dev` starts server and web; `/api/health` returns 200 with DB status.
 - One passing test in each workspace. CI green on the PR.
 

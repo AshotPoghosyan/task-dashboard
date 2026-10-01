@@ -3,7 +3,6 @@
 Read: CLAUDE.md, docs/SPEC.md sections 4, 8, 10 (backend part).
 
 Tasks:
-
 1. Repositories and services for tasks, merge requests, stats, filter options,
    repositories. Keep the routes → services → repositories layering.
 2. All endpoints in section 8 except sync, webhooks, and events.
@@ -18,7 +17,6 @@ Tasks:
    if needed; record results in docs/ARCHITECTURE.md.
 
 Acceptance:
-
 - Integration tests for every endpoint: happy path, validation error, each filter,
   search, pagination, auth on/off, nesting rule, "merged today" at timezone edges.
 - List endpoints p95 < 100ms on the large seed (write a small benchmark script).
