@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { listMergeRequests } from '../repositories/mergeRequestRepository.js';
 import { decodeCursor, paginate } from '../utils/cursor.js';
 import { AppError } from '../utils/errors.js';
+import { escapeLike } from '../utils/search.js';
 import { toMergeRequest } from './mappers.js';
 
 const SORT_COLUMNS = {
@@ -20,7 +21,7 @@ export function buildMergeRequestWhere(f: MergeRequestFilters): Prisma.MergeRequ
   if (f.assigneeId) where.assigneeId = { in: f.assigneeId };
   if (f.reviewerId) where.reviewers = { some: { gitUserId: { in: f.reviewerId } } };
   if (f.targetBranch) where.targetBranch = { in: f.targetBranch };
-  if (f.q) where.title = { contains: f.q, mode: 'insensitive' };
+  if (f.q) where.title = { contains: escapeLike(f.q), mode: 'insensitive' };
   return where;
 }
 

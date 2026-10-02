@@ -27,6 +27,22 @@ describe('auth disabled (no DASHBOARD_PASSWORD)', () => {
 });
 
 describe('auth enabled', () => {
+  it('only exempts exact public paths, not look-alike prefixes', async () => {
+    app = await makeApp(secured);
+    const res = await app.inject({ method: 'GET', url: '/api/health-secrets' });
+    expect(res.statusCode).toBe(401);
+  });
+
+  it('allows credentialed CORS from the web origin', async () => {
+    app = await makeApp(secured);
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/health',
+      headers: { origin: 'http://localhost:5173' },
+    });
+    expect(res.headers['access-control-allow-credentials']).toBe('true');
+  });
+
   it('rejects API calls without a session, but keeps health public', async () => {
     app = await makeApp(secured);
     const res = await app.inject({ method: 'GET', url: '/api/tasks' });

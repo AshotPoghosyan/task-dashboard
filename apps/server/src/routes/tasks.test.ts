@@ -125,6 +125,16 @@ describe('PATCH /api/tasks/:id', () => {
     expect(clear.json().status).toBe('OPEN');
   });
 
+  it('never produces a two-level tree when re-parenting concurrently', async () => {
+    const a = await create({ title: 'a' });
+    const b = await create({ title: 'b' });
+    const patch = (id: string, parentId: string) =>
+      app.inject({ method: 'PATCH', url: `/api/tasks/${id}`, payload: { parentId } });
+    const results = await Promise.all([patch(a.id, b.id), patch(b.id, a.id)]);
+    expect(results.filter((r) => r.statusCode === 200)).toHaveLength(1);
+    expect(results.filter((r) => r.statusCode === 422)).toHaveLength(1);
+  });
+
   it('enforces the nesting rule when re-parenting', async () => {
     const a = await create({ title: 'a' });
     const b = await create({ title: 'b' });
@@ -245,6 +255,13 @@ describe('GET /api/tasks', () => {
     expect(ids(await get('?type=BUG,FEATURE')).sort()).toEqual([a.id, b.id].sort());
     expect(ids(await get('?type=BUG&assignee=Bob'))).toEqual([]);
     expect(ids(await get('?q='))).toHaveLength(2);
+  });
+
+  it('treats LIKE wildcards in the search term literally', async () => {
+    const a = await create({ title: '100% done' });
+    await create({ title: 'plain' });
+    expect(ids(await get('?q=%25'))).toEqual([a.id]);
+    expect(ids(await get('?q=_'))).toEqual([]);
   });
 
   it('lists a parent when only a sub-bug matches, keeping all its children', async () => {

@@ -10,12 +10,14 @@ import {
   findTaskById,
   findTaskCore,
   linkMr,
+  lockTasks,
   listTopLevelTasks,
   unlinkMr,
   updateTask as patchTask,
 } from '../repositories/taskRepository.js';
 import { decodeCursor, paginate } from '../utils/cursor.js';
 import { AppError } from '../utils/errors.js';
+import { escapeLike } from '../utils/search.js';
 import { toTask } from './mappers.js';
 import { recalculateTaskStatus } from './taskStatusService.js';
 
@@ -25,7 +27,7 @@ function filterConditions(f: TaskFilters): Prisma.TaskWhereInput[] {
   if (f.assignee) conds.push({ assigneeName: { in: f.assignee } });
   if (f.targetBranch) conds.push({ targetBranch: { in: f.targetBranch } });
   if (f.type) conds.push({ type: { in: f.type } });
-  if (f.q) conds.push({ title: { contains: f.q, mode: 'insensitive' } });
+  if (f.q) conds.push({ title: { contains: escapeLike(f.q), mode: 'insensitive' } });
   return conds;
 }
 
@@ -64,6 +66,8 @@ async function assertValidParent(
   taskId: string | undefined,
   db: Db,
 ): Promise<void> {
+  // Serialise concurrent re-parenting so two requests cannot create a 2-level tree.
+  await lockTasks(taskId ? [parentId, taskId] : [parentId], db);
   if (parentId === taskId) {
     throw AppError.unprocessable('INVALID_PARENT', 'A task cannot be its own parent');
   }

@@ -30,7 +30,7 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
   });
 
   await app.register(helmet);
-  await app.register(cors, { origin: env.WEB_ORIGIN });
+  await app.register(cors, { origin: env.WEB_ORIGIN, credentials: true });
   await app.register(sensible);
   await app.register(rateLimit, { max: env.RATE_LIMIT_MAX, timeWindow: '1 minute' });
   await app.register(errorHandlerPlugin);

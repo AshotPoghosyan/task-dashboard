@@ -1,4 +1,4 @@
-import type { MrStatus, Prisma, TaskStatus } from '@prisma/client';
+import { Prisma, type MrStatus, type TaskStatus } from '@prisma/client';
 import { getPrisma } from '../db/prisma.js';
 import type { Db } from './db.js';
 
@@ -112,4 +112,10 @@ export async function linkMr(taskId: string, mergeRequestId: string, db: Db): Pr
 export async function unlinkMr(taskId: string, mergeRequestId: string, db: Db): Promise<boolean> {
   const { count } = await db.taskMergeRequest.deleteMany({ where: { taskId, mergeRequestId } });
   return count > 0;
+}
+
+/** Row-locks the given tasks (in a stable order, to avoid deadlocks) until the transaction ends. */
+export async function lockTasks(ids: string[], db: Db): Promise<void> {
+  const sorted = [...new Set(ids)].sort();
+  await db.$queryRaw`SELECT id FROM tasks WHERE id IN (${Prisma.join(sorted)}) ORDER BY id FOR UPDATE`;
 }
