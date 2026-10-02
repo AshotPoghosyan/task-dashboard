@@ -45,6 +45,7 @@ describe('POST /api/tasks', () => {
     expect(res.statusCode).toBe(400);
     const body = errorResponseSchema.parse(res.json());
     expect(body.error.code).toBe('VALIDATION_ERROR');
+    expect(body.error.message).toMatch(/^Invalid title: /);
   });
 
   it('creates a sub-bug under a parent', async () => {

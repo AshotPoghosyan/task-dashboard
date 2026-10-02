@@ -20,8 +20,11 @@ export const errorHandlerPlugin = fp(async (app) => {
 
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof ZodError) {
+      const first = error.issues[0];
+      const field = first?.path.join('.');
+      const message = first ? `Invalid ${field || 'request'}: ${first.message}` : 'Invalid request';
       return reply.code(400).send({
-        error: { code: 'VALIDATION_ERROR', message: 'Invalid request', details: error.issues },
+        error: { code: 'VALIDATION_ERROR', message, details: error.issues },
       });
     }
     if (error instanceof AppError) {
