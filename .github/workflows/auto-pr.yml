@@ -1,54 +1,113 @@
 name: Auto PR
 
-# Runs after every Claude Agent run finishes. Claude's pushes do not trigger
-# workflows by themselves, so we react to the agent run completing instead.
+# Phase pipeline (runs from main, reacts to other workflows finishing):
+#   Claude Agent finishes -> open PR, start CI, request the next review persona
+#                            (Senior Dev -> QA -> Product), one at a time
+#   CI finishes green     -> if all reviews are done and nothing is running,
+#                            post "Ready to merge"
 on:
   workflow_run:
-    workflows: ["Claude Agent"]
+    workflows: ["Claude Agent", "CI"]
     types: [completed]
   workflow_dispatch:
-
-concurrency:
-  group: auto-pr
-  cancel-in-progress: false
 
 permissions:
   contents: read
   pull-requests: write
-  issues: read
-  actions: write # needed to start CI on Claude branches
+  issues: write
+  actions: write
 
 jobs:
-  open-prs:
+  pipeline:
     runs-on: ubuntu-latest
     steps:
-      - name: Open PRs and start CI for Claude branches
+      - name: Run phase pipeline
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BOT_TOKEN: ${{ secrets.PHASE_BOT_TOKEN }}
           REPO: ${{ github.repository }}
+          EVENT_WF: ${{ github.event.workflow_run.name }}
+          RUN_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+          RUN_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
         run: |
+          set -euo pipefail
+
+          # Product review only where users see something (API, UI, docs phases)
+          PRODUCT_PHASES=" 4 7 8 9 10 11 "
+
+          agent_busy() {
+            gh run list --repo "$REPO" --workflow claude.yml --limit 20 --json status \
+              --jq '[.[] | select(.status != "completed")] | length'
+          }
+          personas_for() {
+            local phase="$1"
+            if [[ "$PRODUCT_PHASES" == *" $phase "* ]]; then echo "senior qa product"; else echo "senior qa"; fi
+          }
+          phase_of_issue() {
+            gh issue view "$1" --repo "$REPO" --json title --jq .title | sed -nE 's#^Phase ([0-9]+).*#\1#p'
+          }
+          persona_label() {
+            case "$1" in senior) echo "Senior Developer";; qa) echo "Senior QA";; product) echo "Product";; esac
+          }
+
+          # ---------- CI finished: maybe announce "Ready to merge" ----------
+          if [ "$EVENT_WF" = "CI" ]; then
+            case "$RUN_BRANCH" in claude/issue-*) ;; *) echo "Not a Claude branch."; exit 0 ;; esac
+            [ "$RUN_CONCLUSION" = "success" ] || { echo "CI is $RUN_CONCLUSION. Not ready."; exit 0; }
+            number=$(gh pr list --repo "$REPO" --head "$RUN_BRANCH" --state open --json number --jq '.[0].number // empty')
+            [ -n "$number" ] || { echo "No open PR."; exit 0; }
+            head=$(gh pr view "$number" --repo "$REPO" --json headRefOid --jq .headRefOid)
+            [ "$head" = "$RUN_SHA" ] || { echo "CI was for an older commit."; exit 0; }
+            issue=$(echo "$RUN_BRANCH" | sed -nE 's#^claude/issue-([0-9]+)-.*#\1#p')
+            phase=$(phase_of_issue "$issue")
+            comments=$(gh api "repos/$REPO/issues/$number/comments" --paginate --jq '.[].body')
+            for p in $(personas_for "$phase"); do
+              echo "$comments" | grep -qF "<!-- review:$p -->" || { echo "Review '$p' not done yet."; exit 0; }
+            done
+            echo "$comments" | grep -qF "<!-- ready:$RUN_SHA -->" && { echo "Already announced."; exit 0; }
+            [ "$(agent_busy)" = "0" ] || { echo "Agent still working."; exit 0; }
+            done_list=""
+            for p in $(personas_for "$phase"); do done_list="$done_list $(persona_label "$p") ✓"; done
+            body=$(printf '✅ **Ready to merge.** Build, reviews (%s) and CI are done on the latest commit.\n\nPhase report: #%s. Merging starts the next phase automatically.\n\n<!-- ready:%s -->' "${done_list# }" "$issue" "$RUN_SHA")
+            gh pr comment "$number" --repo "$REPO" --body "$body"
+            exit 0
+          fi
+
+          # ---------- Agent finished (or manual run): PR, CI, next reviewer ----------
           branches=$(gh api "repos/$REPO/branches" --paginate --jq '.[].name' | grep -E '^claude/issue-[0-9]+-' || true)
-          if [ -z "$branches" ]; then echo "No Claude branches."; exit 0; fi
+          [ -n "$branches" ] || { echo "No Claude branches."; exit 0; }
 
           for branch in $branches; do
             issue=$(echo "$branch" | sed -nE 's#^claude/issue-([0-9]+)-.*#\1#p')
             state=$(gh issue view "$issue" --repo "$REPO" --json state --jq .state 2>/dev/null || echo MISSING)
-            if [ "$state" != "OPEN" ]; then
-              echo "$branch: issue #$issue is $state, skipping."; continue
-            fi
+            [ "$state" = "OPEN" ] || { echo "$branch: issue #$issue is $state, skipping."; continue; }
 
             pr_state=$(gh pr list --repo "$REPO" --head "$branch" --state all --json state --jq '.[0].state // empty')
             if [ -z "$pr_state" ]; then
               title=$(gh issue view "$issue" --repo "$REPO" --json title --jq .title)
               body=$(printf 'Closes #%s\n\nOpened automatically from `%s`. The phase report is on issue #%s.' "$issue" "$branch" "$issue")
-              gh pr create --repo "$REPO" --head "$branch" --base main --title "$title" --body "$body"
-              pr_state=OPEN
+              gh pr create --repo "$REPO" --head "$branch" --base main --title "$title" --body "$body" || true
+              pr_state=$(gh pr list --repo "$REPO" --head "$branch" --state all --json state --jq '.[0].state // empty')
             fi
+            [ "$pr_state" = "OPEN" ] || { echo "$branch: PR is ${pr_state:-missing}, skipping."; continue; }
+            number=$(gh pr list --repo "$REPO" --head "$branch" --state open --json number --jq '.[0].number')
 
-            if [ "$pr_state" = "OPEN" ]; then
-              echo "$branch: starting CI on latest commit"
-              gh workflow run ci.yml --repo "$REPO" --ref "$branch"
-            else
-              echo "$branch: PR is $pr_state, skipping."
-            fi
+            echo "$branch: starting CI on latest commit"
+            gh workflow run ci.yml --repo "$REPO" --ref "$branch" || echo "Could not start CI on $branch"
+
+            if [ "$(agent_busy)" != "0" ]; then echo "Agent busy, next reviewer later."; continue; fi
+
+            phase=$(phase_of_issue "$issue")
+            comments=$(gh api "repos/$REPO/issues/$number/comments" --paginate --jq '.[].body')
+            for p in $(personas_for "$phase"); do
+              if ! echo "$comments" | grep -qF "<!-- review:$p -->"; then
+                [ -n "$BOT_TOKEN" ] || { echo "::error::PHASE_BOT_TOKEN missing"; exit 1; }
+                label=$(persona_label "$p")
+                review=$(printf '@claude Act as the %s reviewer: execute prompts/review-%s.md for this PR. Fix what that prompt says to fix, push to this branch, and finish with a short summary.\n\n<!-- review:%s -->' "$label" "$p" "$p")
+                GH_TOKEN="$BOT_TOKEN" gh pr comment "$number" --repo "$REPO" --body "$review"
+                echo "$branch: requested $label review on PR #$number"
+                break
+              fi
+            done
           done
