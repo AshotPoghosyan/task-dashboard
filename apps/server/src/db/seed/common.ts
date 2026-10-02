@@ -17,37 +17,7 @@ export function pick<T>(rng: Rng, items: readonly T[]): T {
   return items[Math.floor(rng() * items.length)] as T;
 }
 
-/** Offset (ms) of `timeZone` from UTC at the given instant. */
-function zoneOffsetMs(timeZone: string, at: Date): number {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    hourCycle: 'h23',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  }).formatToParts(at);
-  const get = (type: string): number => Number(parts.find((p) => p.type === type)?.value);
-  const asUtc = Date.UTC(
-    get('year'),
-    get('month') - 1,
-    get('day'),
-    get('hour'),
-    get('minute'),
-    get('second'),
-  );
-  return asUtc - Math.floor(at.getTime() / 1000) * 1000;
-}
-
-/** UTC instant at which "today" begins in `timeZone`. */
-export function startOfTodayInZone(timeZone: string, now: Date = new Date()): Date {
-  const offset = zoneOffsetMs(timeZone, now);
-  const local = new Date(now.getTime() + offset);
-  const localMidnight = Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate());
-  return new Date(localMidnight - offset);
-}
+export { startOfTodayInZone } from '../../utils/timezone.js';
 
 const MR_PRIORITY: MrStatus[] = ['DRAFT', 'OPEN', 'IN_REVIEW'];
 

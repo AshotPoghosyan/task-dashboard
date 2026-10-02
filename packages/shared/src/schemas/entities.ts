@@ -105,3 +105,23 @@ export const statsSchema = z.object({
   closedThisWeek: z.number().int().nonnegative(),
 });
 export type Stats = z.infer<typeof statsSchema>;
+
+export const repositoryListSchema = z.object({ items: z.array(repositorySchema) });
+
+export const filterOptionsSchema = z.object({
+  /** Distinct `assigneeName` values on tasks. */
+  assignees: z.array(z.string()),
+  /** Distinct target branches across tasks and merge requests. */
+  branches: z.array(z.string()),
+  repositories: z.array(repositorySchema.pick({ id: true, provider: true, fullPath: true })),
+  /** Git users (authors, assignees, reviewers) for merge request dropdowns. */
+  users: z.array(gitUserSchema),
+});
+export type FilterOptions = z.infer<typeof filterOptionsSchema>;
+
+export const authSessionSchema = z.object({
+  /** True when `DASHBOARD_PASSWORD` is configured. */
+  required: z.boolean(),
+  authenticated: z.boolean(),
+});
+export type AuthSession = z.infer<typeof authSessionSchema>;

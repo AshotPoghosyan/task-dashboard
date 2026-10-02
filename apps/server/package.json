@@ -12,9 +12,12 @@
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:seed": "tsx --env-file-if-exists=../../.env src/db/seed/seed.ts",
-    "db:seed:large": "tsx --env-file-if-exists=../../.env src/db/seed/seedLarge.ts"
+    "db:seed:large": "tsx --env-file-if-exists=../../.env src/db/seed/seedLarge.ts",
+    "bench": "tsx --env-file-if-exists=../../.env src/bench/listBenchmark.ts",
+    "explain": "tsx --env-file-if-exists=../../.env src/bench/explain.ts"
   },
   "dependencies": {
+    "@fastify/compress": "^9.2.0",
     "@fastify/cors": "^11.3.0",
     "@fastify/helmet": "^13.1.1",
     "@fastify/rate-limit": "^11.2.0",

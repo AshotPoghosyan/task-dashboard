@@ -118,7 +118,10 @@ model MergeRequest {
   @@index([status])
   @@index([targetBranch])
   @@index([assigneeId])
-  @@index([updatedAtRemote(sort: Desc)])
+  @@index([authorId])
+  @@index([status, updatedAtRemote(sort: Desc)])
+  @@index([repositoryId, updatedAtRemote(sort: Desc)])
+  @@index([updatedAtRemote(sort: Desc), id(sort: Desc)])
   @@index([mergedAt])
   @@index([title(ops: raw("gin_trgm_ops"))], type: Gin)
   @@map("merge_requests")
@@ -157,9 +160,11 @@ model Task {
   children      Task[]             @relation("TaskChildren")
   mergeRequests TaskMergeRequest[]
 
-  @@index([parentId])
+  @@index([parentId, sortOrder])
   @@index([status])
   @@index([targetBranch])
+  @@index([assigneeName])
+  @@index([type])
   @@index([title(ops: raw("gin_trgm_ops"))], type: Gin)
   @@map("tasks")
 }
