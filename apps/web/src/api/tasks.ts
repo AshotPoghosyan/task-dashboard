@@ -15,6 +15,7 @@ import {
   useMutation,
   useQuery,
   useQueryClient,
+  type QueryClient,
 } from '@tanstack/react-query';
 import { useToast } from '../components/ui/Toast';
 import { api } from './client';
@@ -53,6 +54,12 @@ export const useMergeRequestSearch = (q: string, enabled: boolean) =>
     placeholderData: keepPreviousData,
   });
 
+/** Task edits change stat counts and can add assignees/branches to the filter options. */
+const invalidateTaskData = (qc: QueryClient) =>
+  Promise.all(
+    [tasksKey, ['stats'], ['filter-options']].map((queryKey) => qc.invalidateQueries({ queryKey })),
+  );
+
 export function useCreateTask() {
   const qc = useQueryClient();
   const toast = useToast();
@@ -62,7 +69,7 @@ export function useCreateTask() {
     onSuccess: (t) => toast({ title: 'Task created', description: t.title, tone: 'success' }),
     onError: (e) =>
       toast({ title: 'Could not create task', description: e.message, tone: 'error' }),
-    onSettled: () => qc.invalidateQueries({ queryKey: tasksKey }),
+    onSettled: () => invalidateTaskData(qc),
   });
 }
 
@@ -83,7 +90,7 @@ function useOptimistic<V>(
       toast({ title: failure, description: e.message, tone: 'error' });
     },
     // Server recalculates status and sort; reconcile with the truth either way.
-    onSettled: () => qc.invalidateQueries({ queryKey: tasksKey }),
+    onSettled: () => invalidateTaskData(qc),
   });
 }
 
