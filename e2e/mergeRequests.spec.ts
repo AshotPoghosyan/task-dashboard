@@ -35,9 +35,15 @@ test.describe('Merge requests page', () => {
       )
       .toBeGreaterThan(0);
 
+    const filtered = page.waitForResponse(
+      (r) => /\/api\/merge-requests\?/.test(r.url()) && r.url().includes('status=MERGED'),
+    );
     await page.getByRole('button', { name: /^Status/ }).click();
     await page.getByRole('menuitemcheckbox', { name: 'Merged' }).click();
     await page.keyboard.press('Escape');
+    const body = (await (await filtered).json()) as { items: { status: string }[] };
+    expect(body.items.length).toBeGreaterThan(0);
+    expect(body.items.every((i) => i.status === 'MERGED')).toBe(true);
     await expect(page).toHaveURL(/status=MERGED/);
     await expect(table.getByRole('row').nth(1)).toBeVisible();
   });
