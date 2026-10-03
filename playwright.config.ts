@@ -2,6 +2,8 @@ import { defineConfig, devices } from '@playwright/test';
 
 const WEB_URL = 'http://localhost:4173';
 export const E2E_PASSWORD = 'e2e-password';
+/** E2E truncates and re-seeds this database, so prefer the test one over the dev one. */
+export const E2E_DATABASE_URL = process.env.DATABASE_URL_TEST || process.env.DATABASE_URL || '';
 
 /** E2E runs against the production builds (`pnpm build` first) and the large seed. */
 export default defineConfig({
@@ -32,6 +34,7 @@ export default defineConfig({
       timeout: 60_000,
       env: {
         PORT: '4000',
+        DATABASE_URL: E2E_DATABASE_URL,
         NODE_ENV: 'test',
         DASHBOARD_PASSWORD: E2E_PASSWORD,
         SESSION_SECRET: process.env.SESSION_SECRET || 'e2e-only-session-secret-0123456789',
