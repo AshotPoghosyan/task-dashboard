@@ -1,6 +1,99 @@
 # Architecture
 
-See `docs/SPEC.md` section 4 for the layering rules (routes → services → repositories).
+See `docs/SPEC.md` section 4 for the full layout. This document is the final reference for how
+the pieces fit together, the database model, and the measured performance.
+
+## System overview
+
+```mermaid
+flowchart LR
+  Browser["Browser (React SPA)"] -- "REST /api, SSE /api/events" --> Web
+  subgraph Prod["docker-compose.prod.yml"]
+    Web["web: nginx (static + /api proxy)"] --> Server
+    Server["server: Fastify + pg-boss workers"] --> DB[("PostgreSQL 16")]
+  end
+  GitLab["GitLab API"] <-- "read-only sync (providers/gitlab)" --> Server
+  GitHub["GitHub API"] <-- "read-only sync (providers/github)" --> Server
+  GitLab -- "MR webhooks" --> Web
+  GitHub -- "PR webhooks" --> Web
+```
+
+In development Vite serves the SPA on :5173 and proxies `/api` to the server on :4000.
+`pg-boss` stores its queues in the same PostgreSQL database, so there is no extra service.
+
+## Layering rules
+
+```mermaid
+flowchart TD
+  routes["routes: HTTP, Zod parse of params/query/body/response"] --> services["services: business rules, DTO mapping"]
+  services --> repositories["repositories: Prisma only, no business logic"]
+  services --> providers["providers: only code that calls GitLab/GitHub"]
+  jobs["jobs: pg-boss workers"] --> services
+  services --> events["events: in-process bus"] --> sse["SSE route"]
+  shared["packages/shared: Zod schemas, enums, status rules"] -.-> routes
+  shared -.-> services
+  shared -.-> web["apps/web"]
+```
+
+- Routes never import Prisma; repositories hold no business logic; external APIs are reached
+  only through `providers/`.
+- Schemas, enums and the status/aggregation functions live in `packages/shared` and are
+  imported by both apps, never duplicated.
+- Config comes only from `config/env.ts` (Zod, fails fast). Timestamps are UTC `timestamptz`;
+  the UI formats them in `APP_TIMEZONE`.
+
+## Data flow: periodic sync
+
+```mermaid
+sequenceDiagram
+  participant S as pg-boss schedule
+  participant J as sync job
+  participant P as provider
+  participant SV as syncService
+  participant DB as PostgreSQL
+  participant B as event bus
+  S->>J: every SYNC_INTERVAL_MINUTES, one job per active repository
+  J->>SV: syncRepository(repo)
+  SV->>P: fetch MRs updated since lastSyncedAt
+  P-->>SV: NormalizedMR[]
+  SV->>DB: upsert MRs, users, reviewers (transaction)
+  SV->>DB: link MRs to tasks, recalculate task status
+  SV->>DB: write sync_runs row, set lastSyncedAt
+  SV->>B: mr.updated / task.updated / sync.completed
+  B-->>Browser: SSE, client invalidates affected queries
+```
+
+## Data flow: webhooks
+
+```mermaid
+sequenceDiagram
+  participant G as GitLab / GitHub
+  participant R as POST /api/webhooks/:provider
+  participant DB as PostgreSQL
+  participant Q as pg-boss queue
+  participant W as webhook worker
+  participant B as event bus
+  G->>R: signed delivery
+  R->>R: verify secret / HMAC, parse payload
+  R->>DB: insert webhook_events (unique provider + deliveryId)
+  R->>Q: enqueue
+  R-->>G: 202 (duplicates are acknowledged, not reprocessed)
+  Q->>W: job
+  W->>DB: upsert MR, recalculate linked tasks, invalidate stats cache
+  W->>B: mr.updated / task.updated
+  B-->>Browser: SSE
+```
+
+Details and setup per provider: [WEBHOOKS.md](WEBHOOKS.md).
+
+## Containers
+
+`docker/server.Dockerfile` has `build` (full workspace; reused as the one-shot `migrate`
+job), `deploy` (`pnpm deploy --prod` plus the generated Prisma client) and `runtime`
+(`node:20-slim`, user `node`, healthcheck on `/api/health`). `docker/web.Dockerfile` builds
+the SPA and serves it from `nginx-unprivileged` on :8080 with `/api` proxied to `server:4000`
+(buffering off for SSE) and a `/healthz` healthcheck. Startup order is enforced by compose:
+postgres healthy → migrate completed → server healthy → web.
 
 ## Database ER diagram
 
