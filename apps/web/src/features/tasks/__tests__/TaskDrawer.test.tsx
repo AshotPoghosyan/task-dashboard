@@ -48,6 +48,39 @@ describe('TaskDrawer', () => {
     });
   });
 
+  it('keeps notes retryable after a failed save', async () => {
+    const task = makeTask('t1', { notes: null });
+    let fail = true;
+    const { calls } = stubApi({
+      'PATCH /tasks/t1': () =>
+        fail
+          ? new Response(JSON.stringify({ error: { code: 'X', message: 'nope' } }), { status: 500 })
+          : task,
+      'GET /tasks': () => ({ items: [], nextCursor: null }),
+    });
+    let close = () => {};
+    function Host() {
+      const [open, setOpen] = useState(true);
+      close = () => setOpen(false);
+      return (
+        <TaskDrawer
+          task={open ? task : undefined}
+          onClose={noop}
+          onEdit={noop}
+          onAddSubBug={noop}
+        />
+      );
+    }
+    renderWithProviders(<Host />);
+    await userEvent.type(screen.getByLabelText('Notes'), 'hi');
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Not saved'), {
+      timeout: NOTES_DEBOUNCE_MS + 2000,
+    });
+    fail = false;
+    act(() => close());
+    await waitFor(() => expect(patchBodies(calls)).toEqual([{ notes: 'hi' }, { notes: 'hi' }]));
+  });
+
   it('flushes pending notes when the drawer closes early', async () => {
     const task = makeTask('t1', { notes: null });
     const { calls } = stubApi({

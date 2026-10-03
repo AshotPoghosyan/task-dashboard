@@ -15,8 +15,13 @@ export function TaskNotes({ taskId, saved }: { taskId: string; saved: string | n
 
   const save = (value: string) => {
     if (value === lastSaved.current) return;
+    const previous = lastSaved.current;
     lastSaved.current = value;
-    update.mutate({ id: taskId, changes: { notes: value.trim() === '' ? null : value } });
+    update.mutate(
+      { id: taskId, changes: { notes: value.trim() === '' ? null : value } },
+      // A failed save must stay retryable: the next edit or unmount flush sends it again.
+      { onError: () => (lastSaved.current = previous) },
+    );
   };
 
   useEffect(() => save(debounced), [debounced]);
@@ -38,10 +43,10 @@ export function TaskNotes({ taskId, saved }: { taskId: string; saved: string | n
         className="w-full rounded-control border border-border bg-bg p-2 text-sm text-fg"
       />
       <p role="status" className="text-xs text-fg-muted">
-        {dirty || update.isPending
-          ? 'Saving…'
-          : update.isError
-            ? 'Not saved'
+        {update.isError
+          ? 'Not saved'
+          : dirty || update.isPending
+            ? 'Saving…'
             : 'Saved automatically'}
       </p>
     </div>
