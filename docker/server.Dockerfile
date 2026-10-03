@@ -15,7 +15,7 @@ CMD ["pnpm", "db:migrate:deploy"]
 
 # Production-only dependencies for the server, plus the Prisma client generated in `build`.
 FROM build AS deploy
-RUN pnpm --filter @mrdash/server deploy --prod /out \
+RUN pnpm --filter @mrdash/server deploy --prod --ignore-scripts /out \
   && src=$(dirname "$(dirname "$(readlink -f apps/server/node_modules/@prisma/client)")")/.prisma \
   && dst=$(dirname "$(dirname "$(readlink -f /out/node_modules/@prisma/client)")")/.prisma \
   && rm -rf "$dst" && cp -r "$src" "$dst"
