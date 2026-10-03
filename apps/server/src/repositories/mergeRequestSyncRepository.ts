@@ -14,7 +14,7 @@ async function upsertUsers(
     const row = await db.gitUser.upsert({
       where: { provider_externalId: { provider, externalId: u.externalId } },
       create: { provider, externalId: u.externalId, ...data },
-      update: data,
+      update: u.partial ? {} : data,
       select: { id: true },
     });
     ids.set(u.externalId, row.id);
@@ -78,4 +78,16 @@ export async function upsertMergeRequestBatch(
     mrIds.push(row.id);
   }
   return mrIds;
+}
+
+/** Existing MR with its reviewers, for webhook processing. */
+export function findMergeRequestByNumber(db: Db, repositoryId: string, number: number) {
+  return db.mergeRequest.findUnique({
+    where: { repositoryId_number: { repositoryId, number } },
+    select: {
+      id: true,
+      updatedAtRemote: true,
+      reviewers: { select: { state: true, gitUser: true } },
+    },
+  });
 }

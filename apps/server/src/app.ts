@@ -10,11 +10,18 @@ import { authPlugin } from './plugins/auth.js';
 import { errorHandlerPlugin } from './plugins/errorHandler.js';
 import { etagPlugin } from './plugins/etag.js';
 import { authRoutes } from './routes/auth.js';
+import { eventsRoutes } from './routes/events.js';
 import { healthRoutes } from './routes/health.js';
 import { lookupRoutes } from './routes/lookups.js';
 import { mergeRequestRoutes } from './routes/mergeRequests.js';
 import { syncRoutes } from './routes/sync.js';
 import { taskRoutes } from './routes/tasks.js';
+import { webhookRoutes } from './routes/webhooks.js';
+import { eventBus } from './events/bus.js';
+import { createInlineWebhookQueue } from './jobs/webhookJobs.js';
+import { createWebhookHandlers } from './providers/webhooks.js';
+import { invalidateStatsCache } from './services/statsService.js';
+import type { WebhookQueue } from './services/webhookIngestService.js';
 import { createProviderRegistry, type ProviderRegistry } from './providers/registry.js';
 import { createInlineTrigger, type SyncTrigger } from './services/syncService.js';
 
@@ -22,6 +29,10 @@ export interface AppDeps {
   providers?: ProviderRegistry;
   /** Defaults to running syncs in-process; `server.ts` injects the pg-boss scheduler. */
   syncTrigger?: SyncTrigger;
+  /** Defaults to processing webhooks in-process; `server.ts` injects the pg-boss queue. */
+  webhookQueue?: WebhookQueue;
+  /** SSE keep-alive interval; tests shorten it. */
+  heartbeatMs?: number;
 }
 
 export async function buildApp(env: Env, deps: AppDeps = {}): Promise<FastifyInstance> {
@@ -54,6 +65,21 @@ export async function buildApp(env: Env, deps: AppDeps = {}): Promise<FastifyIns
   const providers = deps.providers ?? createProviderRegistry(env);
   const trigger = deps.syncTrigger ?? createInlineTrigger({ providers, logger: app.log });
   await app.register(syncRoutes, { trigger, providers });
+
+  const handlers = createWebhookHandlers(env);
+  const webhookQueue = deps.webhookQueue ?? createInlineWebhookQueue({ handlers, logger: app.log });
+  await app.register(webhookRoutes, { handlers, queue: webhookQueue });
+  await app.register(eventsRoutes, {
+    env,
+    ...(deps.heartbeatMs !== undefined && { heartbeatMs: deps.heartbeatMs }),
+  });
+
+  // Any change announced on the bus makes the cached stats stale.
+  const offStats = [
+    eventBus.on('mr.updated', invalidateStatsCache),
+    eventBus.on('sync.finished', invalidateStatsCache),
+  ];
+  app.addHook('onClose', async () => offStats.forEach((off) => off()));
 
   app.addHook('onSend', async (request, reply) => {
     void reply.header('x-request-id', request.id);

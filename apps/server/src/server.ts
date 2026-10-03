@@ -7,7 +7,11 @@ import { createProviderRegistry } from './providers/registry.js';
 const env = getEnv();
 const providers = createProviderRegistry(env);
 const scheduler = createSyncScheduler(env, providers);
-const app = await buildApp(env, { providers, syncTrigger: scheduler });
+const app = await buildApp(env, {
+  providers,
+  syncTrigger: scheduler,
+  webhookQueue: scheduler.webhookQueue,
+});
 
 async function shutdown(signal: string): Promise<void> {
   app.log.info({ signal }, 'shutting down');
@@ -20,8 +24,9 @@ process.on('SIGINT', () => void shutdown('SIGINT'));
 process.on('SIGTERM', () => void shutdown('SIGTERM'));
 
 try {
-  await app.listen({ port: env.PORT, host: '0.0.0.0' });
+  // The queue must be running before requests arrive, or early webhooks cannot be enqueued.
   await scheduler.start(app.log);
+  await app.listen({ port: env.PORT, host: '0.0.0.0' });
 } catch (err) {
   app.log.error({ err }, 'failed to start');
   process.exit(1);

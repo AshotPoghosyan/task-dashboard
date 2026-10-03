@@ -1,0 +1,39 @@
+{
+  "action": "opened",
+  "number": 34,
+  "repository": {
+    "id": 1,
+    "full_name": "acme/widgets"
+  },
+  "pull_request": {
+    "id": 777,
+    "number": 34,
+    "title": "Add search box",
+    "body": "Adds the search box",
+    "state": "open",
+    "draft": false,
+    "html_url": "https://github.com/acme/widgets/pull/34",
+    "user": {
+      "id": 101,
+      "login": "ada",
+      "avatar_url": "https://github.example/ada.png"
+    },
+    "assignee": {
+      "id": 101,
+      "login": "ada",
+      "avatar_url": "https://github.example/ada.png"
+    },
+    "requested_reviewers": [],
+    "head": {
+      "ref": "feature/search"
+    },
+    "base": {
+      "ref": "main"
+    },
+    "created_at": "2026-10-03T09:00:00Z",
+    "updated_at": "2026-10-03T10:05:00Z",
+    "closed_at": null,
+    "merged_at": null,
+    "merged": false
+  }
+}

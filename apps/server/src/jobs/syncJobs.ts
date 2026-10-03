@@ -8,11 +8,16 @@ import {
   listActiveRepositories,
 } from '../repositories/syncRepository.js';
 import { syncRepository, type SyncTrigger } from '../services/syncService.js';
+import type { WebhookQueue } from '../services/webhookIngestService.js';
+import { createWebhookHandlers } from '../providers/webhooks.js';
+import { createPgBossWebhookQueue, registerWebhookJobs } from './webhookJobs.js';
 
 export const SYNC_QUEUE = 'sync-repository';
 const STALE_RUN_MS = 60 * 60 * 1000;
 
 export interface SyncScheduler extends SyncTrigger {
+  /** Usable once `start` has resolved. */
+  webhookQueue: WebhookQueue;
   start(logger: FastifyBaseLogger): Promise<void>;
   stop(): Promise<void>;
 }
@@ -20,7 +25,8 @@ export interface SyncScheduler extends SyncTrigger {
 /**
  * pg-boss powered scheduler: every `SYNC_INTERVAL_MINUTES` one job per active repository is
  * queued. The queue policy `short` plus a per-repository singleton key means a repository never
- * has two queued jobs, so a slow sync cannot pile up work.
+ * has two queued jobs, so a slow sync cannot pile up work. The same pg-boss instance runs the
+ * webhook worker and the webhook retention job.
  */
 export function createSyncScheduler(env: Env, providers: ProviderRegistry): SyncScheduler {
   const boss = new PgBoss(env.DATABASE_URL);
@@ -40,6 +46,7 @@ export function createSyncScheduler(env: Env, providers: ProviderRegistry): Sync
 
   return {
     enqueueAll,
+    webhookQueue: createPgBossWebhookQueue(boss),
     async start(logger) {
       boss.on('error', (err) => logger.error({ err }, 'pg-boss error'));
       await boss.start();
@@ -52,6 +59,8 @@ export function createSyncScheduler(env: Env, providers: ProviderRegistry): Sync
           if (repo?.isActive) await syncRepository(repo, { providers, logger });
         }
       });
+
+      await registerWebhookJobs(boss, { handlers: createWebhookHandlers(env), logger }, logger);
 
       const tick = (): void => {
         enqueueAll().catch((err: unknown) => logger.error({ err }, 'failed to enqueue sync jobs'));
