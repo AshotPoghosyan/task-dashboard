@@ -97,9 +97,9 @@ describe('auth enabled', () => {
 
   it('leaves webhook paths exempt from the session check', async () => {
     app = await makeApp(secured);
-    // No webhook routes exist yet (Phase 6): a 404 proves auth did not intercept with 401.
+    // The webhook route answers with its own signature error, not the session UNAUTHORIZED.
     const res = await app.inject({ method: 'POST', url: '/api/webhooks/gitlab', payload: {} });
-    expect(res.statusCode).toBe(404);
+    expect(res.json()).toMatchObject({ error: { code: 'INVALID_SIGNATURE' } });
   });
 
   it('rate limits login attempts', async () => {

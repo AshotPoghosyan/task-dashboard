@@ -6,7 +6,7 @@ export interface AppEvents {
   'sync.finished': { repositoryId: string; status: 'SUCCESS' | 'FAILED' };
 }
 
-/** In-process typed event bus; the SSE stream (Phase 6) subscribes to it. */
+/** In-process typed event bus; the SSE stream subscribes to it. */
 class TypedBus {
   private readonly emitter = new EventEmitter();
 
@@ -17,6 +17,10 @@ class TypedBus {
   on<K extends keyof AppEvents>(event: K, listener: (payload: AppEvents[K]) => void): () => void {
     this.emitter.on(event, listener);
     return () => this.emitter.off(event, listener);
+  }
+
+  listenerCount(event: keyof AppEvents): number {
+    return this.emitter.listenerCount(event);
   }
 }
 

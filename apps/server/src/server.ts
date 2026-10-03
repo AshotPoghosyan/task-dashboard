@@ -7,7 +7,11 @@ import { createProviderRegistry } from './providers/registry.js';
 const env = getEnv();
 const providers = createProviderRegistry(env);
 const scheduler = createSyncScheduler(env, providers);
-const app = await buildApp(env, { providers, syncTrigger: scheduler });
+const app = await buildApp(env, {
+  providers,
+  syncTrigger: scheduler,
+  webhookQueue: scheduler.webhookQueue,
+});
 
 async function shutdown(signal: string): Promise<void> {
   app.log.info({ signal }, 'shutting down');

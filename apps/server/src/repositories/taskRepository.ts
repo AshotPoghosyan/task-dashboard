@@ -119,3 +119,15 @@ export async function lockTasks(ids: string[], db: Db): Promise<void> {
   const sorted = [...new Set(ids)].sort();
   await db.$queryRaw`SELECT id FROM tasks WHERE id IN (${Prisma.join(sorted)}) ORDER BY id FOR UPDATE`;
 }
+
+/** A sub-task of `parentId` that is linked to the merge request, if any. */
+export function findChildLinkedToMr(
+  parentId: string,
+  mergeRequestId: string,
+  db: Db,
+): Promise<{ id: string } | null> {
+  return db.task.findFirst({
+    where: { parentId, mergeRequests: { some: { mergeRequestId } } },
+    select: { id: true },
+  });
+}

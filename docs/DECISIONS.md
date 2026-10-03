@@ -41,3 +41,16 @@
 ## 2026-10-03 — Incremental sync overlap and single in-flight inline sync
 
 Incremental fetches start 60 s before `lastSyncedAt`, and the inline trigger ignores a request while a sync is running. Reason: clock skew with the remote could otherwise drop updates, and repeated `POST /api/sync` would run overlapping syncs (upserts are idempotent, so the overlap is harmless).
+
+## 2026-10-03 — Phase 6 webhooks and real-time events
+
+- **Separate `WebhookHandler` instead of extending `GitProvider`.** Webhook secrets and API tokens are configured independently; a provider without an API token must still accept signed webhooks. Handlers live in `providers/{gitlab,github}/webhook.ts` and are built by `providers/webhooks.ts`. (Supersedes the 2026-10-03 note that `parseWebhook`/`verifyWebhook` would join `GitProvider`.)
+- **An empty webhook secret rejects every request (401).** An unset secret must never mean "accept anything".
+- **Irrelevant event types are answered 200 before anything is stored** (only GitLab `Merge Request Hook` and GitHub `pull_request` are processed). `pull_request_review` is not handled: the payload would need a review fetch, and the periodic sync picks reviews up. Previously recorded GitHub approvals/change requests are preserved when a later `pull_request` event lists no reviewers.
+- **Missing delivery id falls back to a SHA-256 of the raw body** so hand-made requests stay idempotent.
+- **GitLab webhook author:** the payload has only `author_id`. The actor is used when it is the author; otherwise a placeholder user is created marked `partial`, which never overwrites an existing user's fields (the next sync fills in the details). Merge/close times fall back to `updated_at` when the payload omits them.
+- **Out-of-order deliveries:** an event whose `updated_at` is older than the stored MR is recorded as `ignored: stale event` and does not change the MR.
+- **Parent linking:** `Task: #<id>` links to an existing task; `Parent: !n`/`#n` creates one BUG sub-task per MR under the (top-level) task linked to the parent MR. If the linked task is itself a sub-bug the new sub-task goes under its parent (max one nesting level). Unknown tasks/parent MRs are skipped silently. Hints are applied by webhooks only, not by the periodic sync (spec lists them under Webhooks).
+- **Queues:** `process-webhook` (retryLimit 3 with backoff) and `purge-webhook-events` (daily 03:17 cron, 30-day retention) run on the same pg-boss instance as the sync scheduler. Without a queue (tests) events are processed in-process.
+- **SSE:** `/api/events` uses a hijacked raw response (sets CORS headers itself), `retry: 5000`, a `: heartbeat` comment every 25 s, and closes all streams in `preClose` so shutdown does not hang. The stats cache is invalidated on `mr.updated` and `sync.finished`.
+- **Rate limiting is disabled on webhook routes** (unauthenticated requests are rejected before any DB work; provider retries are idempotent). Body limit 5 MB.
