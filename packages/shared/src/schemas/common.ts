@@ -35,3 +35,9 @@ export const multiValue = <T extends z.ZodType>(item: T) =>
       .flatMap((p) => (typeof p === 'string' ? p.split(',') : [p]))
       .filter((p) => p !== '');
   }, z.array(item).optional());
+
+export const idParamSchema = z.object({ id: z.string().min(1) });
+export const taskMergeRequestParamSchema = z.object({
+  id: z.string().min(1),
+  mrId: z.string().min(1),
+});

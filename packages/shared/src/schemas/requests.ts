@@ -64,3 +64,6 @@ export const mergeRequestFiltersSchema = paginationQuerySchema.extend({
   order: z.enum(['asc', 'desc']).default('desc'),
 });
 export type MergeRequestFilters = z.infer<typeof mergeRequestFiltersSchema>;
+
+export const loginSchema = z.object({ password: z.string().min(1).max(500) });
+export type LoginInput = z.infer<typeof loginSchema>;
