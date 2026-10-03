@@ -87,3 +87,17 @@ Incremental fetches start 60 s before `lastSyncedAt`, and the inline trigger ign
 - **Sub-bugs are created from the drawer** ("Add sub-bug" on a top-level task); the new-task dialog has no parent picker. Delete is not exposed in the UI.
 - **Enter shortcut calls `preventDefault`** so the keypress does not activate the first control the drawer focuses.
 - **Live-update row highlight and toasts** depend on SSE, which the spec schedules for the next phase; not included here.
+
+## 2026-10-03 — Phase 9 Merge Requests page + live updates
+
+- **`MergeRequest` now carries `tasks: { id, title }[]`** (shared schema, repository include, mapper) so the table can render the "linked task" column without an extra request per row. The picker fixtures in tests gained `tasks: []`.
+- **SSE payload schemas live in `packages/shared`** (`schemas/events.ts`); the web app validates every event and ignores malformed ones.
+- **Stat cards per status** are Draft, Open, In review, Merged today and Closed this week, all from `/api/stats`. "Open" is `openMrs − draft − pendingReviews`, so no new endpoint is needed. Clicking a card toggles a single-status filter. Merged today / Closed this week narrow to all merged / closed MRs, because the list API has no date filter.
+- **Repository names** in the table come from `/api/filters/options` (`repositories`), joined by `repositoryId`.
+- **Filters** use the same URL scheme as Tasks (`?status=OPEN,DRAFT&authorId=…`); author/assignee/reviewer options are the git users from the options endpoint. `FilterChip` got an optional `raw` value so chips show names while removing by id.
+- **Table is virtualized with `@tanstack/react-virtual` only** (no react-table): the rows are flat, so a plain grid with spacer padding (as in Tasks) is simpler. Rows are `React.memo`; pages of 100, next page fetched within 20 rows of the end.
+- **Live updates** are one `<LiveUpdates />` component mounted in the authenticated shell (so they work on every page). `mr.updated` invalidates merge requests, stats and tasks; `task.updated` invalidates tasks and stats; `sync.finished` also refreshes filter options and sync status. Only mounted/active queries refetch; others are marked stale.
+- **Status-change toast** compares the cached MR status before the refetch with the status after it, so it only fires when a loaded list contains that MR. The row highlight (3 s flash, per-row subscription via `useSyncExternalStore`) is added once the refetch completes.
+- **SSE reconnect** closes the failed `EventSource` and reconnects itself with exponential backoff (1 s → 30 s cap, ±25 % jitter), resetting after a successful open, instead of relying on the browser's fixed retry.
+- **Linked task link** goes to `/?q=<task title>` (Tasks has no per-task route); the first task is shown with a `+N` suffix when several are linked.
+- **Provider-failure popover** lists repositories whose last sync run `FAILED`, with the stored error.

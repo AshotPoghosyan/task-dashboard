@@ -1,6 +1,7 @@
 import { Navigate } from 'react-router-dom';
 import { useSession } from '../../api/auth';
 import { AppShell } from '../../components/layout/AppShell';
+import { LiveUpdates } from '../../components/layout/LiveUpdates';
 import { Button } from '../../components/ui/Button';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Skeleton } from '../../components/ui/Skeleton';
@@ -18,5 +19,10 @@ export function RequireAuth() {
     );
   }
   if (!data.authenticated) return <Navigate to="/login" replace />;
-  return <AppShell showLogout={data.required} />;
+  return (
+    <>
+      <LiveUpdates />
+      <AppShell showLogout={data.required} />
+    </>
+  );
 }

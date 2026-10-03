@@ -103,3 +103,22 @@ curl -N http://localhost:4000/api/events      # add -H 'Cookie: mrdash_session=â
 ```
 
 Events: `mr.updated`, `task.updated`, `sync.finished`; a `: heartbeat` comment is sent every 25 s.
+
+## Manual check: a webhook updates the browser live
+
+1. `pnpm dev`, run `pnpm db:seed` and open `http://localhost:5173/merge-requests`.
+2. Make sure a repository exists whose `externalId` matches the fixture's `project.id`
+   (GitLab fixtures in `apps/server/src/providers/gitlab/__fixtures__/webhook-*.json`).
+3. Post the fixture with the secret token:
+
+   ```sh
+   curl -i -X POST http://localhost:4000/api/webhooks/gitlab \
+     -H "content-type: application/json" \
+     -H "x-gitlab-token: $GITLAB_WEBHOOK_SECRET" \
+     --data @apps/server/src/providers/gitlab/__fixtures__/webhook-merged.json
+   ```
+
+4. Expect `202`. Within a second the matching row flashes, its status badge changes, the
+   "Merged today" card updates and a toast "!N is now Merged" appears (the stream is
+   `GET /api/events`; check it in the browser's Network tab as an `EventStream`).
+5. Stop the server: the browser retries with backoff (1s, 2s, 4s â€¦ 30s) and resumes on restart.

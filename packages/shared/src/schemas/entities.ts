@@ -37,6 +37,10 @@ export const reviewerSchema = z.object({
 });
 export type Reviewer = z.infer<typeof reviewerSchema>;
 
+/** Task reference shown on a merge request row (the "linked task" column). */
+export const linkedTaskSchema = z.object({ id: z.string(), title: z.string() });
+export type LinkedTask = z.infer<typeof linkedTaskSchema>;
+
 export const mergeRequestSchema = z.object({
   id: z.string(),
   repositoryId: z.string(),
@@ -57,6 +61,7 @@ export const mergeRequestSchema = z.object({
   updatedAtRemote: isoDate,
   mergedAt: isoDate.nullable(),
   closedAt: isoDate.nullable(),
+  tasks: z.array(linkedTaskSchema),
 });
 export type MergeRequest = z.infer<typeof mergeRequestSchema>;
 

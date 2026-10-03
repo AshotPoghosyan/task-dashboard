@@ -47,5 +47,6 @@ export function toMergeRequest(row: MergeRequestRow): MergeRequest {
     updatedAtRemote: row.updatedAtRemote.toISOString(),
     mergedAt: row.mergedAt?.toISOString() ?? null,
     closedAt: row.closedAt?.toISOString() ?? null,
+    tasks: row.tasks.map((t) => t.task),
   };
 }

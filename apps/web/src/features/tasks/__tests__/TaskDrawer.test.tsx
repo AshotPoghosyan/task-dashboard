@@ -164,6 +164,7 @@ describe('TaskDrawer', () => {
             updatedAtRemote: '2026-10-01T10:00:00.000Z',
             mergedAt: null,
             closedAt: null,
+            tasks: [],
           },
         ],
         nextCursor: null,
