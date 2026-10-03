@@ -8,11 +8,15 @@ import { useToast } from '../ui/Toast';
 export function LiveUpdates() {
   const qc = useQueryClient();
   const toast = useToast();
-  useSSE((name, data) => {
-    void applyLiveEvent(qc, name, data, {
-      highlights,
-      onStatusChange: (change) => toast({ ...statusChangeMessage(change), tone: 'info' }),
-    });
-  });
+  useSSE(
+    (name, data) => {
+      void applyLiveEvent(qc, name, data, {
+        highlights,
+        onStatusChange: (change) => toast({ ...statusChangeMessage(change), tone: 'info' }),
+      });
+    },
+    // Events during the outage are lost, so refetch everything once the stream is back.
+    { onReconnect: () => void qc.invalidateQueries() },
+  );
   return null;
 }

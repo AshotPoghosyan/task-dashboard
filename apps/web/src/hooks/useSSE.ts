@@ -12,6 +12,8 @@ interface Options {
   url?: string;
   /** Injected in tests. */
   createSource?: (url: string) => EventSource;
+  /** Called when the stream reopens after a drop; events sent in the gap were missed. */
+  onReconnect?: () => void;
 }
 
 /**
@@ -20,10 +22,12 @@ interface Options {
  */
 export function useSSE(
   onEvent: (name: SseEventName, data: unknown) => void,
-  { url = '/api/events', createSource }: Options = {},
+  { url = '/api/events', createSource, onReconnect }: Options = {},
 ): void {
   const handler = useRef(onEvent);
   handler.current = onEvent;
+  const reconnected = useRef(onReconnect);
+  reconnected.current = onReconnect;
 
   useEffect(() => {
     const make =
@@ -37,12 +41,15 @@ export function useSSE(
     let timer: ReturnType<typeof setTimeout> | undefined;
     let attempt = 0;
     let stopped = false;
+    let dropped = false;
 
     const connect = () => {
       const es = make(url);
       source = es;
       es.onopen = () => {
         attempt = 0;
+        if (dropped) reconnected.current?.();
+        dropped = false;
       };
       for (const name of SSE_EVENT_NAMES) {
         es.addEventListener(name, (e) => {
@@ -55,6 +62,7 @@ export function useSSE(
       }
       es.onerror = () => {
         es.close();
+        dropped = true;
         if (stopped) return;
         timer = setTimeout(connect, backoffDelay(attempt++, Math.random()));
       };

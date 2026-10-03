@@ -71,6 +71,17 @@ describe('useSSE', () => {
     expect(FakeSource.instances).toHaveLength(4);
   });
 
+  it('calls onReconnect only when the stream reopens after a drop', () => {
+    const onReconnect = vi.fn();
+    renderHook(() => useSSE(vi.fn(), { createSource, onReconnect }));
+    FakeSource.instances[0]!.onopen?.();
+    expect(onReconnect).not.toHaveBeenCalled();
+    FakeSource.instances[0]!.onerror?.();
+    vi.advanceTimersByTime(1000);
+    FakeSource.instances[1]!.onopen?.();
+    expect(onReconnect).toHaveBeenCalledTimes(1);
+  });
+
   it('closes and stops reconnecting on unmount', () => {
     const { unmount } = renderHook(() => useSSE(vi.fn(), { createSource }));
     FakeSource.instances[0]!.onerror?.();

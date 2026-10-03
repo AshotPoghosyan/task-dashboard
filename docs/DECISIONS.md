@@ -101,3 +101,8 @@ Incremental fetches start 60 s before `lastSyncedAt`, and the inline trigger ign
 - **SSE reconnect** closes the failed `EventSource` and reconnects itself with exponential backoff (1 s → 30 s cap, ±25 % jitter), resetting after a successful open, instead of relying on the browser's fixed retry.
 - **Linked task link** goes to `/?q=<task title>` (Tasks has no per-task route); the first task is shown with a `+N` suffix when several are linked.
 - **Provider-failure popover** lists repositories whose last sync run `FAILED`, with the stored error.
+
+## 2026-10-03 — Resync all queries after an SSE reconnect
+
+Decision: `useSSE` takes `onReconnect`; `LiveUpdates` invalidates every query when the stream reopens after a drop.
+Reason: events emitted during an outage are not replayed, so cached data could stay stale indefinitely.
