@@ -32,7 +32,7 @@ function Harness({
 describe('TasksTable', () => {
   it('renders semantic table markup with a sub-bug count pill', () => {
     render(<Harness />);
-    expect(screen.getByRole('table', { name: 'Tasks' })).toBeInTheDocument();
+    expect(screen.getByRole('treegrid', { name: 'Tasks' })).toBeInTheDocument();
     expect(screen.getAllByRole('columnheader').map((h) => h.textContent)).toContain('Linked MRs');
     const row = screen.getByText('Task a').closest('tr') as HTMLElement;
     expect(within(row).getByText('2')).toBeInTheDocument();

@@ -24,7 +24,7 @@ function TaskRowView({ row, expanded, selected, onOpen, onRender }: TaskRowProps
       data-row-id={task.id}
       aria-level={row.depth + 1}
       aria-selected={selected}
-      aria-expanded={row.getCanExpand() ? expanded : undefined}
+      data-expanded={row.getCanExpand() ? expanded : undefined}
       onClick={() => onOpen(task.id)}
       style={{ height: ROW_HEIGHT }}
       className={cn(
@@ -37,7 +37,7 @@ function TaskRowView({ row, expanded, selected, onOpen, onRender }: TaskRowProps
       {row.getVisibleCells().map((cell) => (
         <td
           key={cell.id}
-          role="cell"
+          role="gridcell"
           className={cn(
             'relative min-w-0 truncate',
             cell.column.columnDef.meta?.className,

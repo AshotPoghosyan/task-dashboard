@@ -1,17 +1,21 @@
 import { ChevronsDownUp, ChevronsUpDown, Plus } from 'lucide-react';
-import { useCallback, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useMemo, useRef, useState } from 'react';
 import { useTasks } from '../../api/tasks';
 import { Button } from '../../components/ui/Button';
 import { useUrlFilters } from '../../hooks/useUrlFilters';
 import { FILTER_KEYS, toQuery } from './filters';
 import { allExpanded, findNode, hasChildren, visibleIds, type TaskNode } from './rows';
 import { TableEmpty, TableError, TableSkeleton } from './TableStates';
-import { TaskDrawer } from './TaskDrawer';
 import { TaskFilterBar } from './TaskFilterBar';
-import { TaskFormDialog } from './TaskFormDialog';
 import { TaskStats } from './TaskStats';
 import { TasksTable } from './TasksTable';
 import { useTaskHotkeys } from './useTaskHotkeys';
+
+// Loaded on first use: keeps the dialog/drawer code (and form validation) out of the first paint.
+const TaskDrawer = lazy(() => import('./TaskDrawer').then((m) => ({ default: m.TaskDrawer })));
+const TaskFormDialog = lazy(() =>
+  import('./TaskFormDialog').then((m) => ({ default: m.TaskFormDialog })),
+);
 
 type FormState = { task?: TaskNode; parentId?: string } | null;
 
@@ -21,6 +25,11 @@ export default function TasksPage() {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [openId, setOpenId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(null);
+  // Once opened, stay mounted so close animations and state keep working.
+  const drawerUsed = useRef(false);
+  const formUsed = useRef(false);
+  drawerUsed.current ||= openId !== null;
+  formUsed.current ||= form !== null;
 
   const tasks = useMemo(() => query.data?.pages.flatMap((p) => p.items) ?? [], [query.data]);
   const ids = useMemo(() => visibleIds(tasks, expanded), [tasks, expanded]);
@@ -88,19 +97,25 @@ export default function TasksPage() {
         />
       )}
 
-      <TaskDrawer
-        task={findNode(tasks, openId)}
-        onClose={() => setOpenId(null)}
-        onEdit={(task) => setForm({ task })}
-        onAddSubBug={(t) => setForm({ parentId: t.id })}
-      />
-      <TaskFormDialog
-        key={form ? (form.task?.id ?? form.parentId ?? 'new') : 'closed'}
-        open={form !== null}
-        onOpenChange={(open) => !open && setForm(null)}
-        task={form?.task}
-        parentId={form?.parentId}
-      />
+      <Suspense fallback={null}>
+        {drawerUsed.current ? (
+          <TaskDrawer
+            task={findNode(tasks, openId)}
+            onClose={() => setOpenId(null)}
+            onEdit={(task) => setForm({ task })}
+            onAddSubBug={(t) => setForm({ parentId: t.id })}
+          />
+        ) : null}
+        {formUsed.current ? (
+          <TaskFormDialog
+            key={form ? (form.task?.id ?? form.parentId ?? 'new') : 'closed'}
+            open={form !== null}
+            onOpenChange={(open) => !open && setForm(null)}
+            task={form?.task}
+            parentId={form?.parentId}
+          />
+        ) : null}
+      </Suspense>
     </div>
   );
 }

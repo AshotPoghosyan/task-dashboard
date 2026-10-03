@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && NODE_ENV=production vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
@@ -23,7 +23,6 @@
     "@tanstack/react-query": "^5.104.1",
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/react-virtual": "^3.14.13",
-    "date-fns": "^4.4.0",
     "lucide-react": "^1.51.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
@@ -41,6 +40,7 @@
     "@vitejs/plugin-react": "^6.1.1",
     "axe-core": "^4.13.0",
     "jsdom": "^26.1.0",
+    "rollup-plugin-visualizer": "^7.1.1",
     "tailwindcss": "^4.3.3",
     "vite": "^8.3.1",
     "vitest": "^5.0.3"

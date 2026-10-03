@@ -4,9 +4,13 @@ export default defineConfig({
   test: {
     coverage: {
       provider: 'v8',
-      include: ['src/status/**/*.ts'],
-      exclude: ['src/**/*.test.ts', 'src/status/index.ts'],
-      thresholds: { lines: 100, branches: 100, functions: 100, statements: 100 },
+      include: ['src/**/*.ts'],
+      exclude: ['src/**/*.test.ts', 'src/**/index.ts'],
+      thresholds: {
+        lines: 80,
+        // Status rules are the core business logic: keep them fully covered.
+        'src/status/**/*.ts': { lines: 100, branches: 100, functions: 100, statements: 100 },
+      },
     },
   },
 });
