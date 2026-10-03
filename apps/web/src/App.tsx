@@ -1,9 +1,21 @@
+import { QueryClientProvider } from '@tanstack/react-query';
+import { useState } from 'react';
+import { RouterProvider } from 'react-router-dom';
+import { createQueryClient } from './api/queryClient';
+import { ToastProvider } from './components/ui/Toast';
+import { TooltipProvider } from './components/ui/Tooltip';
+import { createRouter } from './router';
+
 export function App() {
+  const [queryClient] = useState(createQueryClient);
+  const [router] = useState(createRouter);
   return (
-    <div className="min-h-screen bg-bg text-fg">
-      <main className="p-6">
-        <h1 className="text-xl font-semibold">Dashboard</h1>
-      </main>
-    </div>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <ToastProvider>
+          <RouterProvider router={router} />
+        </ToastProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
   );
 }
