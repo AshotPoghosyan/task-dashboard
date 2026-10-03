@@ -21,6 +21,8 @@
     "@radix-ui/react-toast": "^1.2.23",
     "@radix-ui/react-tooltip": "^1.2.16",
     "@tanstack/react-query": "^5.104.1",
+    "@tanstack/react-table": "^8.21.3",
+    "@tanstack/react-virtual": "^3.14.13",
     "date-fns": "^4.4.0",
     "lucide-react": "^1.51.0",
     "react": "^19.3.0",
