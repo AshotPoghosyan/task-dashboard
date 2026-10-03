@@ -185,9 +185,12 @@ merge requests order by `<sort column> <order>, id <order>`; tasks by `sortOrder
 
 Cross-cutting plugins: helmet, CORS (`WEB_ORIGIN`), global rate limit (`RATE_LIMIT_MAX`/min,
 5/min on login), ETag (weak, 304 on `If-None-Match`) registered before gzip/brotli
-compression, and a stateless HMAC-signed session cookie (httpOnly, SameSite=Strict, Secure
-outside development) enforced on `/api/*` when `DASHBOARD_PASSWORD` is set. `/api/health`,
-`/api/auth/*`, `/api/webhooks/*` and `/api/gitlab-webhook` are exempt.
+compression, and the auth plugin enforced on `/api/*` when sign-in is enabled: a stateless
+HMAC-signed password cookie (httpOnly, SameSite=Strict, Secure outside development) and/or a
+server-side OAuth session (`sessions` table, SHA-256 token hash, 14-day sliding expiry,
+SameSite=Lax). Mutations must come from `WEB_ORIGIN` (Origin/Referer check). `/api/health`,
+`/api/auth/*`, `/api/webhooks/*` and `/api/gitlab-webhook` are exempt. See
+[AUTH.md](AUTH.md) for the sign-in flow.
 
 `/api/stats` is cached in memory for 10s; call `invalidateStatsCache()` from any code path that
 changes merge requests. Services that change an MR should call

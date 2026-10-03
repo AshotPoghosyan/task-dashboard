@@ -133,3 +133,21 @@ Incremental fetches start 60 s before `lastSyncedAt`, and the inline trigger ign
 - **`docker-compose.prod.yml` requires `POSTGRES_PASSWORD`** (no default password) and overrides `DATABASE_URL`, `PORT`, `NODE_ENV` after `env_file: .env`.
 - **README has no committed screenshots**; the agent cannot commit binary captures reliably. It points to the seed data and the two pages instead.
 - **`TRUST_PROXY_HOPS` env (default 0)** added in senior review. Behind nginx every request came from the proxy IP, so the login limit (5/min) and global limit were shared by all users. The prod compose sets 1; a hop count (not `true`) stops clients spoofing `X-Forwarded-For`.
+
+## 2026-10-03 — Phase 12 team login
+
+- **No OAuth library; plain `fetch` in `providers/oauth/`.** The prompt prefers `@fastify/oauth2` or `arctic` but allows a choice. Two providers, both authorization-code + PKCE, are about 100 lines each and take an injectable `fetch`, so the tests run against fake endpoints with no network and no new dependency to review. Revisit if a third provider is added.
+- **Callback URL is `${WEB_ORIGIN}/api/auth/callback/<provider>`.** The browser always reaches the API through the web origin (Vite proxy, nginx), so the state cookie, session cookie and redirects share one origin. No new env var.
+- **OAuth state and PKCE verifier live in a short-lived signed cookie** (`mrdash_oauth`, 10 minutes, `Path=/api/auth`), not the database. It is HMAC-signed with `SESSION_SECRET`, bound to the provider, and cleared on every callback outcome.
+- **Admins (`AUTH_ADMINS`) are implicitly allowed** and count as an allowlist for the "at least one must be set" check. Otherwise a fresh install could not bootstrap its first admin without also duplicating the name in `AUTH_ALLOWED_USERS`.
+- **Allowlist entries may be prefixed `github:` / `gitlab:`.** A bare username matches either provider, which is ambiguous across hosts; the prefix lets an owner be exact. Only verified emails are matched.
+- **Membership is checked only if the person is not already listed**, and uses the narrowest endpoints: GitHub `GET /user/memberships/orgs/:org` (state `active`), GitLab `GET /groups/:path/members/all/:id` (includes inherited members). Any provider failure refuses the login (fail closed).
+- **A GitHub email lookup failure is not fatal.** The email only helps allowlist matching.
+- **Two cookies, two mechanisms.** `mrdash_session` (stateless, SameSite=Strict) is unchanged for the shared password. `mrdash_sid` (SameSite=Lax, server-side row, token hash only) is for OAuth. `both` accepts either. A password session has no user, so it is never admin and `updatedBy` stays null.
+- **Sliding expiry writes at most once a minute** per session, so ordinary reads do not become writes; the cookie's Max-Age is refreshed when that write happens.
+- **Origin/Referer check on all mutations except webhooks.** A request with neither header **and** no cookies is let through (a non-browser client cannot be cross-site forged, and existing scripts and tests keep working). With cookies attached, a missing or foreign origin is a 403. E2E sets the server's `WEB_ORIGIN` to the preview URL.
+- **Last-admin protection locks active admin rows** (`SELECT ... FOR UPDATE`) inside the transaction, so two simultaneous demotions cannot both succeed.
+- **`AUTH_TEST_HELPER` + `POST /api/auth/test-login`.** Registered only when the env var is set; env validation fails the boot when it is set with `NODE_ENV=production` (and when OAuth is off); the route registration re-checks `NODE_ENV`. It creates a fake GitHub user with `externalId` `test:<name>`.
+- **`tasks.updatedById`** is set on create, update and link/unlink when the actor is a signed-in user. Deleting a user nulls it (`SET NULL`). Sync and webhook writes leave it alone.
+- **Logout reloads the page** (`location.assign('/login')`) so no query cache of the previous user survives. A session that ends while the app is open sends the user to `/session-expired` instead of `/login`.
+- **`/api/auth/session` gained an optional `user`** and `required` now means "any sign-in is on". Existing clients keep working.

@@ -34,13 +34,14 @@ describe('origin check on mutations', () => {
   it('rejects a foreign Origin, a foreign Referer, "null", and a missing origin with cookies', async () => {
     app = await makeOAuthApp({ AUTH_TEST_HELPER: 'true' });
     const cookie = await loginAs(app, 'ann');
-    for (const headers of [
+    const bad: Record<string, string>[] = [
       { origin: 'https://evil.example' },
       { origin: 'null' },
       { referer: 'https://evil.example/page' },
       { referer: 'not a url' },
       {},
-    ]) {
+    ];
+    for (const headers of bad) {
       const res = await create(app, cookie, headers);
       expect(res.statusCode).toBe(403);
       expect(res.json().error.code).toBe('CSRF_ORIGIN');

@@ -37,6 +37,14 @@ export default defineConfig({
         DATABASE_URL: E2E_DATABASE_URL,
         NODE_ENV: 'test',
         DASHBOARD_PASSWORD: E2E_PASSWORD,
+        // Shared password plus personal accounts. The fake OAuth app is never contacted: tests
+        // sign in through the test-only helper (refused by the server in production).
+        AUTH_MODE: 'both',
+        GITHUB_OAUTH_CLIENT_ID: 'e2e-client',
+        GITHUB_OAUTH_CLIENT_SECRET: 'e2e-secret',
+        AUTH_ALLOWED_USERS: 'e2e-nobody',
+        AUTH_TEST_HELPER: 'true',
+        WEB_ORIGIN: WEB_URL,
         SESSION_SECRET: process.env.SESSION_SECRET || 'e2e-only-session-secret-0123456789',
         GITHUB_WEBHOOK_SECRET: process.env.GITHUB_WEBHOOK_SECRET || 'e2e-github-secret',
         RATE_LIMIT_MAX: '1000000',

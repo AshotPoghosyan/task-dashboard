@@ -22,6 +22,7 @@ pnpm dev                                               # web :5173, API :4000
 
 Open <http://localhost:5173>. With an empty `DASHBOARD_PASSWORD` no login is required. To
 require one, set `DASHBOARD_PASSWORD` and a `SESSION_SECRET` of at least 16 characters in `.env`.
+For personal accounts (GitHub / GitLab sign-in) see [docs/AUTH.md](docs/AUTH.md).
 
 To sync real data, set `GITLAB_TOKEN` / `GITHUB_TOKEN` (read-only) and configure webhooks, see
 [docs/WEBHOOKS.md](docs/WEBHOOKS.md). `pnpm db:seed` replaces all data with demo data; do not
@@ -32,27 +33,34 @@ run it against a database you care about.
 Config is validated at boot by `apps/server/src/config/env.ts`; the server refuses to start on
 invalid values.
 
-| Variable                | Default                 | Description                                                                 |
-| ----------------------- | ----------------------- | --------------------------------------------------------------------------- |
-| `NODE_ENV`              | `development`           | `development`, `test` or `production`                                       |
-| `PORT`                  | `4000`                  | API port                                                                    |
-| `WEB_ORIGIN`            | `http://localhost:5173` | Allowed CORS origin (the URL users open)                                    |
-| `DATABASE_URL`          | required                | PostgreSQL connection string                                                |
-| `DATABASE_URL_TEST`     | -                       | Database for integration tests and E2E                                      |
-| `APP_TIMEZONE`          | `Asia/Yerevan`          | IANA timezone for display and "today" boundaries                            |
-| `DASHBOARD_PASSWORD`    | empty (no auth)         | Shared password protecting `/api/*`                                         |
-| `SESSION_SECRET`        | empty                   | Cookie signing key, 16+ chars when a password is set                        |
-| `GITLAB_BASE_URL`       | `https://gitlab.com`    | GitLab instance URL                                                         |
-| `GITLAB_TOKEN`          | empty                   | Token with `read_api` scope                                                 |
-| `GITLAB_WEBHOOK_SECRET` | empty                   | Secret token; empty rejects all GitLab webhooks                             |
-| `GITHUB_TOKEN`          | empty                   | Fine-grained token: Pull requests read, Metadata read                       |
-| `GITHUB_WEBHOOK_SECRET` | empty                   | HMAC secret; empty rejects all GitHub webhooks                              |
-| `SYNC_INTERVAL_MINUTES` | `5`                     | Periodic sync interval per active repository                                |
-| `RATE_LIMIT_MAX`        | `300`                   | Requests per minute per client (login is limited to 5/min)                  |
-| `TRUST_PROXY_HOPS`      | `0`                     | Trusted reverse-proxy hops for client IP (rate limits); prod compose sets 1 |
-| `LOG_LEVEL`             | `info`                  | pino level                                                                  |
-| `POSTGRES_PASSWORD`     | required (prod compose) | Only read by `docker-compose.prod.yml`                                      |
-| `WEB_PORT`              | `8080`                  | Only read by `docker-compose.prod.yml`: published web port                  |
+| Variable                             | Default                 | Description                                                                  |
+| ------------------------------------ | ----------------------- | ---------------------------------------------------------------------------- |
+| `NODE_ENV`                           | `development`           | `development`, `test` or `production`                                        |
+| `PORT`                               | `4000`                  | API port                                                                     |
+| `WEB_ORIGIN`                         | `http://localhost:5173` | Allowed CORS origin (the URL users open)                                     |
+| `DATABASE_URL`                       | required                | PostgreSQL connection string                                                 |
+| `DATABASE_URL_TEST`                  | -                       | Database for integration tests and E2E                                       |
+| `APP_TIMEZONE`                       | `Asia/Yerevan`          | IANA timezone for display and "today" boundaries                             |
+| `DASHBOARD_PASSWORD`                 | empty (no auth)         | Shared password protecting `/api/*`                                          |
+| `SESSION_SECRET`                     | empty                   | Cookie signing key, 16+ chars when any sign-in is enabled                    |
+| `AUTH_MODE`                          | auto                    | `password`, `oauth` or `both`; `oauth` if a provider is set, else `password` |
+| `GITHUB_OAUTH_CLIENT_ID` / `_SECRET` | empty                   | GitHub OAuth app; enables "Continue with GitHub"                             |
+| `GITLAB_OAUTH_CLIENT_ID` / `_SECRET` | empty                   | GitLab OAuth app (uses `GITLAB_BASE_URL`); enables "Continue with GitLab"    |
+| `AUTH_ALLOWED_USERS`                 | empty                   | Comma-separated usernames or emails allowed to sign in                       |
+| `AUTH_ALLOWED_GITHUB_ORG`            | empty                   | Members of this GitHub org may sign in                                       |
+| `AUTH_ALLOWED_GITLAB_GROUP`          | empty                   | Members of this GitLab group (full path) may sign in                         |
+| `AUTH_ADMINS`                        | empty                   | Usernames/emails that become admins on first login (also allowed in)         |
+| `GITLAB_BASE_URL`                    | `https://gitlab.com`    | GitLab instance URL                                                          |
+| `GITLAB_TOKEN`                       | empty                   | Token with `read_api` scope                                                  |
+| `GITLAB_WEBHOOK_SECRET`              | empty                   | Secret token; empty rejects all GitLab webhooks                              |
+| `GITHUB_TOKEN`                       | empty                   | Fine-grained token: Pull requests read, Metadata read                        |
+| `GITHUB_WEBHOOK_SECRET`              | empty                   | HMAC secret; empty rejects all GitHub webhooks                               |
+| `SYNC_INTERVAL_MINUTES`              | `5`                     | Periodic sync interval per active repository                                 |
+| `RATE_LIMIT_MAX`                     | `300`                   | Requests per minute per client (login is limited to 5/min)                   |
+| `TRUST_PROXY_HOPS`                   | `0`                     | Trusted reverse-proxy hops for client IP (rate limits); prod compose sets 1  |
+| `LOG_LEVEL`                          | `info`                  | pino level                                                                   |
+| `POSTGRES_PASSWORD`                  | required (prod compose) | Only read by `docker-compose.prod.yml`                                       |
+| `WEB_PORT`                           | `8080`                  | Only read by `docker-compose.prod.yml`: published web port                   |
 
 ## Scripts
 
@@ -95,6 +103,7 @@ Load demo data into the prod stack (destructive, only for trials):
 
 - [docs/SPEC.md](docs/SPEC.md): specification (source of truth)
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): diagrams, layering, ER, performance results
+- [docs/AUTH.md](docs/AUTH.md): team sign-in with GitHub/GitLab, allowlists, admins
 - [docs/WEBHOOKS.md](docs/WEBHOOKS.md): webhook setup and payload handling
 - [docs/DECISIONS.md](docs/DECISIONS.md): choices the spec did not cover
 - [docs/BACKLOG.md](docs/BACKLOG.md): ideas beyond the MVP
