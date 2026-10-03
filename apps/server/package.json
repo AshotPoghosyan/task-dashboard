@@ -8,7 +8,7 @@
     "build": "prisma generate && tsc -p tsconfig.build.json",
     "start": "node dist/server.js",
     "typecheck": "prisma generate && tsc --noEmit",
-    "test": "prisma generate && vitest run",
+    "test": "prisma generate && vitest run --coverage",
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:seed": "tsx --env-file-if-exists=../../.env src/db/seed/seed.ts",

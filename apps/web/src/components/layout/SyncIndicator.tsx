@@ -1,7 +1,6 @@
-import { formatDistanceToNow } from 'date-fns';
 import { AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
 import { useSyncStatus } from '../../api/sync';
-import { formatDateTime } from '../../lib/datetime';
+import { formatDateTime, relativeAge } from '../../lib/datetime';
 
 /** Compact top-bar status: syncing / last synced time / failures. */
 export function SyncIndicator() {
@@ -36,7 +35,7 @@ export function SyncIndicator() {
       )}
       {last ? (
         <time dateTime={last} title={formatDateTime(last)} className="tabular">
-          Synced {formatDistanceToNow(new Date(last), { addSuffix: true })}
+          Synced {relativeAge(last)}
         </time>
       ) : (
         'Never synced'

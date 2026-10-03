@@ -101,3 +101,24 @@ Incremental fetches start 60 s before `lastSyncedAt`, and the inline trigger ign
 - **SSE reconnect** closes the failed `EventSource` and reconnects itself with exponential backoff (1 s → 30 s cap, ±25 % jitter), resetting after a successful open, instead of relying on the browser's fixed retry.
 - **Linked task link** goes to `/?q=<task title>` (Tasks has no per-task route); the first task is shown with a `+N` suffix when several are linked.
 - **Provider-failure popover** lists repositories whose last sync run `FAILED`, with the stored error.
+
+## 2026-10-03 — Phase 10 E2E, performance, hardening
+
+- **New dev dependencies:** `@playwright/test`, `@axe-core/playwright`, `lighthouse`, `chrome-launcher`, `rollup-plugin-visualizer`, `@vitest/coverage-v8` (all named or implied by the phase prompt). `date-fns` removed (replaced by `relativeAge`).
+- **E2E runs against production builds and the large seed.** `playwright.config.ts` starts the API (`pnpm --filter @mrdash/server start`, port 4000, `DASHBOARD_PASSWORD` set) and `vite preview` (port 4173, `/api` proxied). The global setup re-seeds `DATABASE_URL_TEST` (falling back to `DATABASE_URL` only when unset) and passes the same URL to the API, so a developer's dev database is not wiped when a test database is configured. One worker, because tests share the database. A setup project logs in once and stores the session, because login is rate limited to 5/min.
+- **Webhook E2E posts a real HMAC-signed GitHub payload** to `acme/large-web` (a repository in the large seed) and expects the MR to appear through SSE without a reload.
+- **Web build forces `NODE_ENV=production`** (see ARCHITECTURE → Performance). Without it CI's `NODE_ENV=test` bundles development React.
+- **Tasks table role is `treegrid`** (cells `gridcell`) so `aria-level` on sub-bug rows is valid; `aria-expanded` stays on the toggle button only.
+- **`--fg-muted` lightened** to pass WCAG AA contrast (found by axe).
+- **Coverage thresholds in config** (server `services` ≥ 80% lines; shared ≥ 80% lines overall and 100% for `status/`). Server `test` now runs with `--coverage`.
+- **CI change needed (owner):** `.github/workflows/ci.yml` must not be edited by the agent. To add E2E, append after the build step:
+
+  ```yaml
+  - run: pnpm exec playwright install --with-deps chromium
+  - run: pnpm exec playwright test
+  - if: failure()
+    uses: actions/upload-artifact@v4
+    with: { name: playwright-report, path: 'playwright-report/', retention-days: 7 }
+  ```
+
+  (`pnpm run e2e` also works but rebuilds first.) The existing job env already provides `DATABASE_URL` and `GITHUB_WEBHOOK_SECRET`; the E2E webServer sets the rest.

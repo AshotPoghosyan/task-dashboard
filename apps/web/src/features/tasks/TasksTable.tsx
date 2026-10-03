@@ -82,7 +82,7 @@ export function TasksTable({
       className="min-h-0 flex-1 overflow-auto rounded-card border border-border bg-surface"
     >
       <table
-        role="table"
+        role="treegrid"
         aria-label="Tasks"
         aria-rowcount={rows.length + 1}
         className="block min-w-fit"

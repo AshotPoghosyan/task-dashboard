@@ -1,10 +1,9 @@
-import { formatDistanceToNow } from 'date-fns';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { useSyncStatus, useTriggerSync } from '../../api/sync';
 import { Button } from '../../components/ui/Button';
 import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/Popover';
 import { useToast } from '../../components/ui/Toast';
-import { formatDateTime } from '../../lib/datetime';
+import { formatDateTime, relativeAge } from '../../lib/datetime';
 
 /** "Sync now" button, last-synced time, and a popover listing per-repository errors. */
 export function SyncControl() {
@@ -35,7 +34,7 @@ export function SyncControl() {
           title={formatDateTime(last)}
           className="tabular text-xs text-fg-secondary"
         >
-          Last synced {formatDistanceToNow(new Date(last), { addSuffix: true })}
+          Last synced {relativeAge(last)}
         </time>
       ) : data ? (
         <span className="text-xs text-fg-muted">Never synced</span>
