@@ -39,7 +39,7 @@ jobs:
           set -euo pipefail
 
           # Product review only where users see something (API, UI, docs phases)
-          PRODUCT_PHASES=" 4 7 8 9 10 11 "
+          PRODUCT_PHASES=" 4 7 8 9 10 11 12 "
 
           agent_busy() {
             gh run list --repo "$REPO" --workflow claude.yml --limit 20 --json status \
