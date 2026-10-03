@@ -54,3 +54,15 @@ Incremental fetches start 60 s before `lastSyncedAt`, and the inline trigger ign
 - **Queues:** `process-webhook` (retryLimit 3 with backoff) and `purge-webhook-events` (daily 03:17 cron, 30-day retention) run on the same pg-boss instance as the sync scheduler. Without a queue (tests) events are processed in-process.
 - **SSE:** `/api/events` uses a hijacked raw response (sets CORS headers itself), `retry: 5000`, a `: heartbeat` comment every 25 s, and closes all streams in `preClose` so shutdown does not hang. The stats cache is invalidated on `mr.updated` and `sync.finished`.
 - **Rate limiting is disabled on webhook routes** (unauthenticated requests are rejected before any DB work; provider retries are idempotent). Body limit 5 MB.
+
+## 2026-10-03 — Phase 7 design system and app shell
+
+- **React 19 kept** (spec says 18). The scaffold from Phase 1 already uses 19 and every Radix/TanStack package supports it; downgrading would be churn.
+- **New web dependencies** (all named in the spec's stack except where noted): `@tanstack/react-query`, `react-router-dom`, `lucide-react`, `date-fns`, `@fontsource/inter`, Radix `dialog`/`popover`/`tooltip`/`select`/`dropdown-menu`/`toast`, `zod` (direct dep for the API client). Dev: `axe-core` and `@testing-library/user-event` (accessibility and keyboard tests).
+- **MultiSelect is a Radix DropdownMenu of checkbox items**, not a custom listbox: arrow keys, Space/Enter, type-ahead and Esc come for free and the menu stays open while toggling.
+- **Drawer is a Radix Dialog** styled as a side panel (left for mobile nav, right for task details).
+- **ProviderIcon uses `GitBranch` (GitHub) and `GitFork` (GitLab)** with an accessible label: current lucide-react has no brand icons.
+- **Multi-value filters live in the URL comma-separated** (`?status=OPEN,DRAFT&q=text`), which the server's `multiValue` parser already accepts. URL updates use `replace` so typing does not flood history.
+- **Dev-only `/dev/components`** route is registered only when `import.meta.env.DEV`; in production it is unreachable (the bundler still emits its unused chunk).
+- **Tasks and Merge Requests pages are placeholders**; their tables are Phases 8–9. `/sync` shows per-repo sync status and a "Sync now" button.
+- **Axe test disables `color-contrast`** because jsdom has no layout/colors; contrast is addressed by the token palette.
