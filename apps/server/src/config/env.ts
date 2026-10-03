@@ -17,6 +17,8 @@ const envSchema = z
     GITHUB_WEBHOOK_SECRET: z.string().default(''),
     SYNC_INTERVAL_MINUTES: z.coerce.number().int().positive().default(5),
     RATE_LIMIT_MAX: z.coerce.number().int().positive().default(300),
+    /** Reverse proxies in front of the API whose X-Forwarded-For is trusted (0 = none). */
+    TRUST_PROXY_HOPS: z.coerce.number().int().min(0).default(0),
     LOG_LEVEL: z
       .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
       .default('info'),
