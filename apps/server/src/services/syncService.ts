@@ -15,6 +15,8 @@ import { recalculateTasksForMergeRequest } from './taskStatusService.js';
 
 export const SYNC_BATCH_SIZE = 50;
 const TRANSACTION_TIMEOUT_MS = 60_000;
+/** Re-fetch this much before lastSyncedAt so clock skew with the remote cannot drop updates. */
+export const INCREMENTAL_OVERLAP_MS = 60_000;
 
 export interface SyncDeps {
   providers: ProviderRegistry;
@@ -85,7 +87,10 @@ export async function syncRepository(repo: Repository, deps: SyncDeps): Promise<
       batch = [];
     };
     // First run (no lastSyncedAt) is a full sync; later runs are incremental.
-    for await (const mr of provider.listMergeRequests(repo, repo.lastSyncedAt ?? undefined)) {
+    const since = repo.lastSyncedAt
+      ? new Date(repo.lastSyncedAt.getTime() - INCREMENTAL_OVERLAP_MS)
+      : undefined;
+    for await (const mr of provider.listMergeRequests(repo, since)) {
       fetched++;
       batch.push(mr);
       if (batch.length >= size) await flush();
@@ -148,12 +153,18 @@ export async function syncAllRepositories(deps: SyncDeps): Promise<SyncOutcome[]
 
 /** Fallback trigger without a job queue: runs the sync in the background of this process. */
 export function createInlineTrigger(deps: SyncDeps): SyncTrigger {
+  let running = false;
   return {
     async enqueueAll() {
       const count = (await listActiveRepositories()).length;
-      void syncAllRepositories(deps).catch((err: unknown) =>
-        deps.logger.error({ err }, 'background sync failed'),
-      );
+      // A sync already in flight covers this request; never run two over the same repositories.
+      if (running) return count;
+      running = true;
+      void syncAllRepositories(deps)
+        .catch((err: unknown) => deps.logger.error({ err }, 'background sync failed'))
+        .finally(() => {
+          running = false;
+        });
       return count;
     },
   };

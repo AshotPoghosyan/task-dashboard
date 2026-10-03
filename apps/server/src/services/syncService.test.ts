@@ -6,7 +6,12 @@ import type { ProviderRegistry } from '../providers/registry.js';
 import type { GitProvider, NormalizedMR, NormalizedUser } from '../providers/types.js';
 import { truncateAll } from '../test/db.js';
 import { createRepo, prisma } from '../test/factories.js';
-import { syncAllRepositories, syncRepository, type SyncDeps } from './syncService.js';
+import {
+  INCREMENTAL_OVERLAP_MS,
+  syncAllRepositories,
+  syncRepository,
+  type SyncDeps,
+} from './syncService.js';
 
 const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
@@ -121,13 +126,15 @@ describe('syncRepository', () => {
     expect(await prisma().syncRun.count()).toBe(3);
   });
 
-  it('runs a full sync first, then incremental from the previous start time', async () => {
+  it('runs a full sync first, then incremental from the previous start time minus the overlap', async () => {
     const { provider, calls } = staticProvider([mr(1)]);
     await syncRepository(repo, deps({ GITLAB: provider }));
     expect(calls[0]).toBeUndefined();
     const synced = (await prisma().repository.findUnique({ where: { id: repo.id } })) as Repository;
     await syncRepository(synced, deps({ GITLAB: provider }));
-    expect(calls[1]).toEqual(synced.lastSyncedAt);
+    expect(calls[1]).toEqual(
+      new Date((synced.lastSyncedAt as Date).getTime() - INCREMENTAL_OVERLAP_MS),
+    );
   });
 
   it('batches large result sets across several transactions', async () => {
