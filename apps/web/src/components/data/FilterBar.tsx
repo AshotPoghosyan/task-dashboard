@@ -6,6 +6,8 @@ export interface FilterChip {
   key: string;
   label: string;
   value: string;
+  /** Underlying filter value when `value` is a display label. */
+  raw?: string;
 }
 
 interface FilterBarProps {
@@ -24,7 +26,7 @@ export function FilterBar({ chips, onRemove, onClearAll, children }: FilterBarPr
         <ul aria-label="Active filters" className="flex flex-wrap items-center gap-2">
           {chips.map((chip) => (
             <li
-              key={`${chip.key}:${chip.value}`}
+              key={`${chip.key}:${chip.raw ?? chip.value}`}
               className="inline-flex items-center gap-1 rounded-control border border-border bg-raised py-0.5 pl-2 pr-1 text-xs text-fg"
             >
               <span className="text-fg-secondary">{chip.label}:</span> {chip.value}

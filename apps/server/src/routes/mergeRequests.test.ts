@@ -43,6 +43,16 @@ describe('GET /api/merge-requests', () => {
     expect(mr.reviewers).toEqual([expect.objectContaining({ state: 'REQUESTED' })]);
   });
 
+  it('includes the linked tasks of each MR', async () => {
+    const repo = await createRepo();
+    const author = await createUser('a');
+    const mr = await createMr({ repositoryId: repo.id, authorId: author.id, title: 'linked' });
+    const task = await prisma().task.create({ data: { title: 'Ship it', type: 'TASK' } });
+    await prisma().taskMergeRequest.create({ data: { taskId: task.id, mergeRequestId: mr.id } });
+    const [item] = (await get()).json().items;
+    expect(item.tasks).toEqual([{ id: task.id, title: 'Ship it' }]);
+  });
+
   it('filters by every supported field', async () => {
     const [r1, r2] = [await createRepo('GITLAB'), await createRepo('GITHUB')];
     const [u1, u2, rev] = [await createUser('u1'), await createUser('u2'), await createUser('rev')];

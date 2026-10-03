@@ -101,3 +101,10 @@ html {
     transform: translateY(-4px);
   }
 }
+
+/* Rows changed by a live update flash with the accent color, then fade out. */
+@keyframes row-flash {
+  from {
+    background-color: color-mix(in srgb, var(--accent) 25%, transparent);
+  }
+}

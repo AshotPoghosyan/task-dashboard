@@ -18,6 +18,7 @@ const mrInclude = {
     select: { state: true, gitUser: { select: userSelect } },
     orderBy: { createdAt: 'asc' },
   },
+  tasks: { select: { task: { select: { id: true, title: true } } } },
 } satisfies Prisma.MergeRequestInclude;
 
 export type MergeRequestRow = Prisma.MergeRequestGetPayload<{ include: typeof mrInclude }>;
