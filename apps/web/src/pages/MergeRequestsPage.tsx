@@ -5,8 +5,8 @@ export default function MergeRequestsPage() {
     <>
       <h1 className="mb-4 text-xl font-semibold">Merge Requests</h1>
       <EmptyState
-        title="Merge requests arrive in a later phase"
-        description="The merge request table is built in Phase 9."
+        title="Merge requests are coming soon"
+        description="This page will list merge requests across your repositories. Check Sync to see repository status."
       />
     </>
   );

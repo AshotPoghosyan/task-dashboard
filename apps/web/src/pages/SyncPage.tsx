@@ -1,4 +1,4 @@
-import { RefreshCw } from 'lucide-react';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { useSyncStatus, useTriggerSync } from '../api/sync';
 import { formatDateTime } from '../lib/datetime';
 import { Button } from '../components/ui/Button';
@@ -15,7 +15,11 @@ export default function SyncPage() {
   const sync = () =>
     trigger.mutate(undefined, {
       onSuccess: (r) =>
-        toast({ title: 'Sync queued', description: `${r.queued} repositories`, tone: 'success' }),
+        toast({
+          title: 'Sync queued',
+          description: `${r.queued} ${r.queued === 1 ? 'repository' : 'repositories'}`,
+          tone: 'success',
+        }),
       onError: () => toast({ title: 'Could not start sync', tone: 'error' }),
     });
 
@@ -24,7 +28,7 @@ export default function SyncPage() {
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold">Sync</h1>
         <Button variant="primary" onClick={sync} disabled={trigger.isPending || data?.running}>
-          <RefreshCw size={14} aria-hidden="true" /> Sync now
+          <RefreshCw size={14} aria-hidden="true" /> {data?.running ? 'Syncing…' : 'Sync now'}
         </Button>
       </div>
       {isPending ? <Skeleton className="h-24 w-full" /> : null}
@@ -43,7 +47,11 @@ export default function SyncPage() {
             <li key={r.repositoryId} className="flex items-center gap-3 p-3 text-sm">
               <ProviderIcon provider={r.provider} />
               <span className="flex-1 text-fg">{r.fullPath}</span>
-              {r.lastRun?.error ? <span className="text-danger">{r.lastRun.error}</span> : null}
+              {r.lastRun?.error ? (
+                <span className="flex items-center gap-1 text-danger">
+                  <AlertTriangle size={14} aria-hidden="true" /> {r.lastRun.error}
+                </span>
+              ) : null}
               <span className="tabular text-fg-secondary">
                 {r.lastSyncedAt ? formatDateTime(r.lastSyncedAt) : 'Never synced'}
               </span>
