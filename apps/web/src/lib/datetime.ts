@@ -10,3 +10,11 @@ const formatter = new Intl.DateTimeFormat('en-GB', {
 
 /** Formats a UTC ISO timestamp in APP_TIMEZONE. */
 export const formatDateTime = (iso: string): string => formatter.format(new Date(iso));
+
+const dateFormatter = new Intl.DateTimeFormat('en-GB', {
+  timeZone: APP_TIMEZONE,
+  dateStyle: 'medium',
+});
+
+/** Formats a UTC ISO timestamp as a date in APP_TIMEZONE. */
+export const formatDate = (iso: string): string => dateFormatter.format(new Date(iso));

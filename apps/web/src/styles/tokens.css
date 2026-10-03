@@ -93,3 +93,11 @@ html {
     opacity: 0.5;
   }
 }
+
+/* Sub-bug rows fade/slide in when their parent expands. */
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}

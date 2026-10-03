@@ -71,3 +71,19 @@ Incremental fetches start 60 s before `lastSyncedAt`, and the inline trigger ign
 
 - **Web display timezone** comes from `VITE_APP_TIMEZONE` (default `Asia/Yerevan`, same default as the server's `APP_TIMEZONE`) via `lib/datetime.ts` (`Intl.DateTimeFormat`), instead of the browser's local zone. The server does not expose its timezone to the client yet.
 - **A 401 on any query/mutation invalidates the session query**, so an expired cookie sends the user to `/login` via the route guard rather than showing per-page errors.
+
+## 2026-10-03 — Phase 8 Tasks page
+
+- **New web dependencies:** `@tanstack/react-table` (pinned to v8; v9 changed the API) and `@tanstack/react-virtual`, both in the fixed stack.
+- **Search is the top-bar search**, which already owns the `q` URL param, the 250 ms debounce and the `/` shortcut. The Tasks filter bar shows it as a removable "Search" chip instead of adding a second input bound to the same param.
+- **Stat cards filter by status:** Total Open MRs → `DRAFT,OPEN,IN_REVIEW`, Pending Reviews → `IN_REVIEW`, Merged Today → `MERGED`. The tasks API has no date filter, so "Merged Today" narrows to all merged tasks, not only today's. Clicking an active card clears the filter. The secondary "vs yesterday" line is omitted: `/api/stats` does not return it.
+- **Virtualization uses padding spacers** (top/bottom padding on the body) instead of absolutely positioned rows, so rows carry no position props and `React.memo` rows are not re-rendered when another row expands. Rows have a fixed 40 px height.
+- **Expand animation is on mount only** (sub-rows fade/slide in, 150 ms, disabled under `prefers-reduced-motion`); collapse is immediate, because virtualized rows unmount.
+- **Responsive columns:** below `lg` only ID, Title and Status are shown; the drawer has the rest. (Spec asks for the dropped columns to move into the expanded row; the drawer is used instead.)
+- **ID column** shows the last 6 characters of the cuid. **Merged column** shows the task's `updatedAt` when its status is MERGED, since the task payload carries no merge date.
+- **Tasks list** loads pages of 200 and fetches the next page when scrolling near the end.
+- **Optimistic updates** (with rollback and an error toast) cover edit, status override, notes, link and unlink. Create is not optimistic (the server assigns id and ordering) and invalidates the list instead.
+- **Notes autosave** after 800 ms idle and flush on unmount, so closing the drawer never drops edits.
+- **Sub-bugs are created from the drawer** ("Add sub-bug" on a top-level task); the new-task dialog has no parent picker. Delete is not exposed in the UI.
+- **Enter shortcut calls `preventDefault`** so the keypress does not activate the first control the drawer focuses.
+- **Live-update row highlight and toasts** depend on SSE, which the spec schedules for the next phase; not included here.
