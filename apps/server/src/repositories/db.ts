@@ -5,6 +5,9 @@ import { getPrisma } from '../db/prisma.js';
 export type Db = PrismaClient | Prisma.TransactionClient;
 
 /** Runs `fn` in one transaction; repositories called with the given `db` join it. */
-export function inTransaction<T>(fn: (db: Prisma.TransactionClient) => Promise<T>): Promise<T> {
-  return getPrisma().$transaction(fn);
+export function inTransaction<T>(
+  fn: (db: Prisma.TransactionClient) => Promise<T>,
+  options?: { timeout?: number },
+): Promise<T> {
+  return getPrisma().$transaction(fn, options);
 }

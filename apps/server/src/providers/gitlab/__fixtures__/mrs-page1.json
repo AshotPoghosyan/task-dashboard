@@ -1,0 +1,66 @@
+[
+  {
+    "id": 9001,
+    "iid": 5,
+    "title": "Draft: add export",
+    "description": "Description 5",
+    "state": "opened",
+    "draft": true,
+    "source_branch": "feat/5",
+    "target_branch": "main",
+    "web_url": "https://gitlab.example/group/app/-/merge_requests/5",
+    "author": {
+      "id": 11,
+      "username": "alice",
+      "name": "Alice A",
+      "avatar_url": "https://gitlab.example/avatar/11.png"
+    },
+    "assignee": null,
+    "reviewers": [],
+    "created_at": "2026-09-20T10:00:00.000Z",
+    "updated_at": "2026-10-01T10:00:00.000Z",
+    "merged_at": null,
+    "closed_at": null
+  },
+  {
+    "id": 9002,
+    "iid": 4,
+    "title": "Add login throttling",
+    "description": "Description 4",
+    "state": "opened",
+    "draft": false,
+    "source_branch": "feat/4",
+    "target_branch": "main",
+    "web_url": "https://gitlab.example/group/app/-/merge_requests/4",
+    "author": {
+      "id": 12,
+      "username": "bob",
+      "name": "Bob B",
+      "avatar_url": "https://gitlab.example/avatar/12.png"
+    },
+    "assignee": {
+      "id": 11,
+      "username": "alice",
+      "name": "Alice A",
+      "avatar_url": "https://gitlab.example/avatar/11.png"
+    },
+    "reviewers": [
+      {
+        "id": 11,
+        "username": "alice",
+        "name": "Alice A",
+        "avatar_url": "https://gitlab.example/avatar/11.png"
+      },
+      {
+        "id": 13,
+        "username": "carol",
+        "name": "",
+        "avatar_url": "https://gitlab.example/avatar/13.png"
+      }
+    ],
+    "created_at": "2026-09-18T10:00:00.000Z",
+    "updated_at": "2026-09-30T10:00:00.000Z",
+    "merged_at": null,
+    "closed_at": null
+  }
+]

@@ -13,9 +13,18 @@ import { authRoutes } from './routes/auth.js';
 import { healthRoutes } from './routes/health.js';
 import { lookupRoutes } from './routes/lookups.js';
 import { mergeRequestRoutes } from './routes/mergeRequests.js';
+import { syncRoutes } from './routes/sync.js';
 import { taskRoutes } from './routes/tasks.js';
+import { createProviderRegistry, type ProviderRegistry } from './providers/registry.js';
+import { createInlineTrigger, type SyncTrigger } from './services/syncService.js';
 
-export async function buildApp(env: Env): Promise<FastifyInstance> {
+export interface AppDeps {
+  providers?: ProviderRegistry;
+  /** Defaults to running syncs in-process; `server.ts` injects the pg-boss scheduler. */
+  syncTrigger?: SyncTrigger;
+}
+
+export async function buildApp(env: Env, deps: AppDeps = {}): Promise<FastifyInstance> {
   const app = Fastify({
     genReqId: (req) => {
       const header = req.headers['x-request-id'];
@@ -42,6 +51,9 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
   await app.register(taskRoutes);
   await app.register(mergeRequestRoutes);
   await app.register(lookupRoutes, { env });
+  const providers = deps.providers ?? createProviderRegistry(env);
+  const trigger = deps.syncTrigger ?? createInlineTrigger({ providers, logger: app.log });
+  await app.register(syncRoutes, { trigger, providers });
 
   app.addHook('onSend', async (request, reply) => {
     void reply.header('x-request-id', request.id);
