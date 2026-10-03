@@ -11,6 +11,11 @@ on:
     types: [completed]
   workflow_dispatch:
 
+# One pipeline run at a time, so two runs never create duplicate PRs or reviews
+concurrency:
+  group: auto-pr
+  cancel-in-progress: false
+
 permissions:
   contents: read
   pull-requests: write
@@ -77,6 +82,21 @@ jobs:
           # ---------- Agent finished (or manual run): PR, CI, next reviewer ----------
           branches=$(gh api "repos/$REPO/branches" --paginate --jq '.[].name' | grep -E '^claude/issue-[0-9]+-' || true)
           [ -n "$branches" ] || { echo "No Claude branches."; exit 0; }
+
+          # Only the newest branch per issue counts (an issue can get more than one branch)
+          declare -A best_branch=() best_date=()
+          for b in $branches; do
+            i=$(echo "$b" | sed -nE 's#^claude/issue-([0-9]+)-.*#\1#p')
+            d=$(gh api "repos/$REPO/branches/$b" --jq .commit.commit.committer.date)
+            if [ -z "${best_date[$i]:-}" ] || [[ "$d" > "${best_date[$i]}" ]]; then
+              best_date[$i]="$d"; best_branch[$i]="$b"
+            fi
+          done
+          for b in $branches; do
+            i=$(echo "$b" | sed -nE 's#^claude/issue-([0-9]+)-.*#\1#p')
+            [ "${best_branch[$i]}" = "$b" ] || echo "$b: older duplicate for issue #$i, ignored."
+          done
+          branches="${best_branch[*]}"
 
           for branch in $branches; do
             issue=$(echo "$branch" | sed -nE 's#^claude/issue-([0-9]+)-.*#\1#p')
