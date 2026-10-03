@@ -143,6 +143,14 @@ describe('webhook ingestion', () => {
     expect(await prisma().webhookEvent.count()).toBe(1);
   });
 
+  it('forgets the event when queueing fails so the provider retry is accepted', async () => {
+    await glRepo();
+    enqueue.mockRejectedValueOnce(new Error('queue down'));
+    expect((await gitlab('open', { uuid: 'retry' })).statusCode).toBe(500);
+    expect(await prisma().webhookEvent.count()).toBe(0);
+    expect((await gitlab('open', { uuid: 'retry' })).statusCode).toBe(202);
+  });
+
   it('ignores irrelevant event types with 200', async () => {
     await glRepo();
     const res = await gitlab('open', { event: 'Push Hook' });

@@ -19,6 +19,11 @@ export async function insertWebhookEvent(e: NewWebhookEvent): Promise<{ id: stri
   }
 }
 
+/** Removes a stored event, e.g. when it could not be queued so a redelivery is not seen as a duplicate. */
+export async function deleteWebhookEvent(id: string): Promise<void> {
+  await getPrisma().webhookEvent.deleteMany({ where: { id } });
+}
+
 export function findWebhookEvent(id: string): Promise<WebhookEvent | null> {
   return getPrisma().webhookEvent.findUnique({ where: { id } });
 }

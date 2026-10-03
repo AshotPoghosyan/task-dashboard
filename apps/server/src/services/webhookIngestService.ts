@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import type { Prisma } from '@prisma/client';
 import type { WebhookHeaders } from '../providers/types.js';
 import type { WebhookHandlers } from '../providers/webhooks.js';
-import { insertWebhookEvent } from '../repositories/webhookEventRepository.js';
+import { deleteWebhookEvent, insertWebhookEvent } from '../repositories/webhookEventRepository.js';
 import { AppError } from '../utils/errors.js';
 
 /** Hands a stored event to the job queue (pg-boss in production). */
@@ -42,6 +42,12 @@ export async function ingestWebhook(
     handler.deliveryId(headers) ?? `sha256:${createHash('sha256').update(rawBody).digest('hex')}`;
   const stored = await insertWebhookEvent({ provider, deliveryId, eventType, payload });
   if (!stored) return 'duplicate';
-  await deps.queue.enqueue(stored.id);
+  try {
+    await deps.queue.enqueue(stored.id);
+  } catch (err) {
+    // Otherwise the provider's retry would hit the unique key and the event would be lost.
+    await deleteWebhookEvent(stored.id);
+    throw err;
+  }
   return 'accepted';
 }
