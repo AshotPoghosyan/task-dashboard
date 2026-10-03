@@ -5,6 +5,7 @@ import {
   reviewerStateSchema,
   taskStatusSchema,
   taskTypeSchema,
+  userRoleSchema,
 } from '../enums.js';
 
 const isoDate = z.string().datetime({ offset: true });
@@ -89,6 +90,8 @@ const taskBaseShape = {
   sortOrder: z.number().int(),
   createdAt: isoDate,
   updatedAt: isoDate,
+  /** Signed-in user who last changed the task; null for password logins and seeded data. */
+  updatedBy: z.object({ id: z.string(), displayName: z.string() }).nullable(),
   mergeRequests: z.array(mergeRequestSummarySchema),
 };
 
@@ -124,9 +127,45 @@ export const filterOptionsSchema = z.object({
 });
 export type FilterOptions = z.infer<typeof filterOptionsSchema>;
 
+/** The signed-in person as the UI needs them. */
+export const authUserSchema = z.object({
+  id: z.string(),
+  provider: providerSchema,
+  username: z.string(),
+  displayName: z.string(),
+  avatarUrl: z.string().nullable(),
+  role: userRoleSchema,
+});
+export type AuthUser = z.infer<typeof authUserSchema>;
+
 export const authSessionSchema = z.object({
-  /** True when `DASHBOARD_PASSWORD` is configured. */
+  /** True when the API requires a login (password and/or OAuth is configured). */
   required: z.boolean(),
   authenticated: z.boolean(),
+  /** Present for OAuth sessions; absent for the shared-password session. */
+  user: authUserSchema.optional(),
 });
 export type AuthSession = z.infer<typeof authSessionSchema>;
+
+export const AUTH_MODES = ['password', 'oauth', 'both'] as const;
+export const authModeSchema = z.enum(AUTH_MODES);
+export type AuthMode = z.infer<typeof authModeSchema>;
+
+export const authProvidersSchema = z.object({
+  mode: authModeSchema,
+  /** True when the shared password form should be offered. */
+  password: z.boolean(),
+  providers: z.array(z.object({ id: providerSchema, name: z.string() })),
+});
+export type AuthProviders = z.infer<typeof authProvidersSchema>;
+
+/** A user row on the admin screen. */
+export const userSchema = authUserSchema.extend({
+  email: z.string().nullable(),
+  lastLoginAt: isoDate.nullable(),
+  disabledAt: isoDate.nullable(),
+  createdAt: isoDate,
+});
+export type User = z.infer<typeof userSchema>;
+
+export const userListSchema = z.object({ items: z.array(userSchema) });

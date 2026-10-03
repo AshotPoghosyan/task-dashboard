@@ -6,6 +6,7 @@ import {
   SYNC_STATUSES,
   TASK_STATUSES,
   TASK_TYPES,
+  USER_ROLES,
 } from '@mrdash/shared';
 import { describe, expect, it } from 'vitest';
 
@@ -20,6 +21,7 @@ describe('shared enums match the Prisma enums', () => {
     ['TaskStatus', TASK_STATUSES],
     ['SyncStatus', SYNC_STATUSES],
     ['ReviewerState', REVIEWER_STATES],
+    ['UserRole', USER_ROLES],
   ])('%s', (name, shared) => {
     expect(prismaValues(name)).toEqual([...shared]);
   });

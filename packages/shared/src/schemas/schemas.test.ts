@@ -4,8 +4,10 @@ import {
   errorResponseSchema,
   mergeRequestFiltersSchema,
   paginationQuerySchema,
+  providerParamSchema,
   taskFiltersSchema,
   updateTaskSchema,
+  updateUserSchema,
 } from './index.js';
 
 describe('pagination', () => {
@@ -63,5 +65,18 @@ describe('error response', () => {
       true,
     );
     expect(errorResponseSchema.safeParse({ message: 'm' }).success).toBe(false);
+  });
+});
+
+describe('user management schemas', () => {
+  it('requires at least one field and validates the role', () => {
+    expect(updateUserSchema.safeParse({}).success).toBe(false);
+    expect(updateUserSchema.safeParse({ role: 'OWNER' }).success).toBe(false);
+    expect(updateUserSchema.parse({ disabled: true })).toEqual({ disabled: true });
+  });
+
+  it('maps the :provider URL segment to the enum', () => {
+    expect(providerParamSchema.parse({ provider: 'github' }).provider).toBe('GITHUB');
+    expect(providerParamSchema.safeParse({ provider: 'bitbucket' }).success).toBe(false);
   });
 });

@@ -14,6 +14,11 @@ enum Provider {
   GITHUB
 }
 
+enum UserRole {
+  ADMIN
+  MEMBER
+}
+
 enum MrStatus {
   DRAFT
   OPEN
@@ -153,9 +158,11 @@ model Task {
   notes          String?
   parentId       String?
   sortOrder      Int         @default(0)
+  updatedById    String?
   createdAt      DateTime    @default(now()) @db.Timestamptz(3)
   updatedAt      DateTime    @updatedAt @db.Timestamptz(3)
 
+  updatedBy     User?              @relation("TaskUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
   parent        Task?              @relation("TaskChildren", fields: [parentId], references: [id], onDelete: Cascade)
   children      Task[]             @relation("TaskChildren")
   mergeRequests TaskMergeRequest[]
@@ -216,4 +223,46 @@ model SyncRun {
 
   @@index([repositoryId, startedAt(sort: Desc)])
   @@map("sync_runs")
+}
+
+/// A dashboard sign-in account (GitHub or GitLab OAuth). Not the same as `GitUser`, which is an
+/// MR author/reviewer synced from a provider.
+model User {
+  id          String    @id @default(cuid())
+  provider    Provider
+  externalId  String
+  username    String
+  email       String?
+  displayName String
+  avatarUrl   String?
+  role        UserRole  @default(MEMBER)
+  lastLoginAt DateTime? @db.Timestamptz(3)
+  disabledAt  DateTime? @db.Timestamptz(3)
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @db.Timestamptz(3)
+
+  sessions Session[]
+  tasks    Task[]    @relation("TaskUpdatedBy")
+
+  @@unique([provider, externalId])
+  @@index([email])
+  @@map("users")
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  userId     String
+  /// SHA-256 of the cookie token; the token itself is never stored.
+  tokenHash  String   @unique
+  expiresAt  DateTime @db.Timestamptz(3)
+  lastSeenAt DateTime @db.Timestamptz(3)
+  userAgent  String?
+  ip         String?
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
 }

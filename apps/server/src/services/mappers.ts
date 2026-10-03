@@ -18,6 +18,7 @@ export function toSubTask(row: TaskCore): SubTask {
     sortOrder: row.sortOrder,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
+    updatedBy: row.updatedBy,
     mergeRequests: row.mergeRequests.map((l) => l.mergeRequest),
   };
 }

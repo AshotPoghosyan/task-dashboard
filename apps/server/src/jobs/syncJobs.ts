@@ -10,6 +10,7 @@ import {
 import { syncRepository, type SyncTrigger } from '../services/syncService.js';
 import type { WebhookQueue } from '../services/webhookIngestService.js';
 import { createWebhookHandlers } from '../providers/webhooks.js';
+import { registerSessionJobs } from './sessionJobs.js';
 import { createPgBossWebhookQueue, registerWebhookJobs } from './webhookJobs.js';
 
 export const SYNC_QUEUE = 'sync-repository';
@@ -61,6 +62,8 @@ export function createSyncScheduler(env: Env, providers: ProviderRegistry): Sync
       });
 
       await registerWebhookJobs(boss, { handlers: createWebhookHandlers(env), logger }, logger);
+
+      await registerSessionJobs(boss, logger);
 
       const tick = (): void => {
         enqueueAll().catch((err: unknown) => logger.error({ err }, 'failed to enqueue sync jobs'));

@@ -66,6 +66,11 @@ export function TaskDrawer({ task, onClose, onEdit, onAddSubBug }: Props) {
               <Row label="Assignee">{task.assigneeName ?? 'Unassigned'}</Row>
               <Row label="Target branch">{task.targetBranch ?? '–'}</Row>
               <Row label="Created">{formatDateTime(task.createdAt)}</Row>
+              {task.updatedBy ? (
+                <Row label="Last edited by">
+                  {task.updatedBy.displayName}, {formatDateTime(task.updatedAt)}
+                </Row>
+              ) : null}
               {hasChildren(task) ? <Row label="Sub-bugs">{task.children.length}</Row> : null}
             </dl>
 

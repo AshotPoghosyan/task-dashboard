@@ -2,17 +2,18 @@ import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '../../lib/cn';
 import { Button } from '../ui/Button';
-import { NAV_ITEMS } from './navItems';
+import { navItemsFor } from './navItems';
 
 interface NavListProps {
+  isAdmin?: boolean;
   collapsed?: boolean;
   onNavigate?: () => void;
 }
 
-export function NavList({ collapsed = false, onNavigate }: NavListProps) {
+export function NavList({ isAdmin = false, collapsed = false, onNavigate }: NavListProps) {
   return (
     <ul className="flex flex-col gap-1">
-      {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
+      {navItemsFor(isAdmin).map(({ to, label, icon: Icon }) => (
         <li key={to}>
           <NavLink
             to={to}
@@ -36,12 +37,13 @@ export function NavList({ collapsed = false, onNavigate }: NavListProps) {
 }
 
 interface SidebarProps {
+  isAdmin: boolean;
   collapsed: boolean;
   onToggle: () => void;
 }
 
 /** Desktop sidebar (≥1024px). Below that the shell shows a drawer instead. */
-export function Sidebar({ collapsed, onToggle }: SidebarProps) {
+export function Sidebar({ isAdmin, collapsed, onToggle }: SidebarProps) {
   return (
     <aside
       className={cn(
@@ -50,7 +52,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       )}
     >
       <nav aria-label="Main">
-        <NavList collapsed={collapsed} />
+        <NavList isAdmin={isAdmin} collapsed={collapsed} />
       </nav>
       <Button
         variant="ghost"

@@ -20,6 +20,7 @@ export function makeTask(id: string, over: Partial<Task> = {}): Task {
     sortOrder: 0,
     createdAt: '2026-10-01T10:00:00.000Z',
     updatedAt: '2026-10-01T10:00:00.000Z',
+    updatedBy: null,
     mergeRequests: [],
     children: [],
     ...over,

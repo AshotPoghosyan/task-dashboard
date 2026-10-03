@@ -16,6 +16,8 @@ import { lookupRoutes } from './routes/lookups.js';
 import { mergeRequestRoutes } from './routes/mergeRequests.js';
 import { syncRoutes } from './routes/sync.js';
 import { taskRoutes } from './routes/tasks.js';
+import { userRoutes } from './routes/users.js';
+import { createOAuthRegistry, type OAuthRegistry } from './providers/oauth/index.js';
 import { webhookRoutes } from './routes/webhooks.js';
 import { eventBus } from './events/bus.js';
 import { createInlineWebhookQueue } from './jobs/webhookJobs.js';
@@ -27,6 +29,8 @@ import { createInlineTrigger, type SyncTrigger } from './services/syncService.js
 
 export interface AppDeps {
   providers?: ProviderRegistry;
+  /** Sign-in providers; tests inject ones backed by a fake `fetch`. */
+  oauth?: OAuthRegistry;
   /** Defaults to running syncs in-process; `server.ts` injects the pg-boss scheduler. */
   syncTrigger?: SyncTrigger;
   /** Defaults to processing webhooks in-process; `server.ts` injects the pg-boss queue. */
@@ -59,7 +63,8 @@ export async function buildApp(env: Env, deps: AppDeps = {}): Promise<FastifyIns
   await app.register(compress, { threshold: 1024 });
   await app.register(authPlugin, { env });
   await app.register(healthRoutes);
-  await app.register(authRoutes, { env });
+  await app.register(authRoutes, { env, oauth: deps.oauth ?? createOAuthRegistry(env) });
+  await app.register(userRoutes);
   await app.register(taskRoutes);
   await app.register(mergeRequestRoutes);
   await app.register(lookupRoutes, { env });

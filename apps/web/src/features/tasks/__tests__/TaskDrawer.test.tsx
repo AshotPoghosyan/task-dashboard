@@ -42,6 +42,22 @@ describe('TaskDrawer', () => {
     expect(screen.queryByText('set manually')).toBeNull();
   });
 
+  it('shows who last edited the task, when known', () => {
+    stubApi({});
+    const render = (task: ReturnType<typeof makeTask>) =>
+      renderWithProviders(
+        <TaskDrawer task={task} onClose={noop} onEdit={noop} onAddSubBug={noop} />,
+      );
+    const { unmount } = render(
+      makeTask('t1', { updatedBy: { id: 'u9', displayName: 'Grace Hopper' } }),
+    );
+    expect(screen.getByText('Last edited by')).toBeInTheDocument();
+    expect(screen.getByText(/Grace Hopper, /)).toBeInTheDocument();
+    unmount();
+    render(makeTask('t2'));
+    expect(screen.queryByText('Last edited by')).toBeNull();
+  });
+
   it('autosaves notes after the debounce, once', async () => {
     const task = makeTask('t1', { notes: 'old' });
     const { calls } = stubApi({

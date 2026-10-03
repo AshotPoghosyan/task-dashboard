@@ -13,11 +13,17 @@ const childOrder = [
   { id: 'asc' },
 ] satisfies Prisma.TaskOrderByWithRelationInput[];
 
+const editorSelect = { select: { id: true, displayName: true } } as const;
+
 export const taskInclude = {
   mergeRequests: { select: mrSummarySelect, orderBy: { createdAt: 'asc' } },
+  updatedBy: editorSelect,
   children: {
     orderBy: childOrder,
-    include: { mergeRequests: { select: mrSummarySelect, orderBy: { createdAt: 'asc' } } },
+    include: {
+      mergeRequests: { select: mrSummarySelect, orderBy: { createdAt: 'asc' } },
+      updatedBy: editorSelect,
+    },
   },
 } satisfies Prisma.TaskInclude;
 

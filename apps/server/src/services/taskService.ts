@@ -90,7 +90,11 @@ async function assertValidParent(
   }
 }
 
-export async function createTask(input: CreateTaskInput): Promise<Task> {
+/** `actorId` is the signed-in user making the change (null for password logins and scripts). */
+export async function createTask(
+  input: CreateTaskInput,
+  actorId: string | null = null,
+): Promise<Task> {
   const id = await inTransaction(async (db) => {
     if (input.parentId) await assertValidParent(input.parentId, undefined, db);
     const override = input.statusOverride ?? null;
@@ -104,6 +108,7 @@ export async function createTask(input: CreateTaskInput): Promise<Task> {
         parentId: input.parentId ?? null,
         statusOverride: override,
         status: aggregateTaskStatus(override, []),
+        updatedById: actorId,
       },
       db,
     );
@@ -112,11 +117,15 @@ export async function createTask(input: CreateTaskInput): Promise<Task> {
   return getTask(id);
 }
 
-export async function updateTask(id: string, input: UpdateTaskInput): Promise<Task> {
+export async function updateTask(
+  id: string,
+  input: UpdateTaskInput,
+  actorId: string | null = null,
+): Promise<Task> {
   await inTransaction(async (db) => {
     if (!(await findTaskCore(id, db))) throw AppError.notFound('Task');
     if (input.parentId) await assertValidParent(input.parentId, id, db);
-    await patchTask(id, input, db);
+    await patchTask(id, { ...input, updatedById: actorId }, db);
     if (input.statusOverride !== undefined) await recalculateTaskStatus(id, db);
   });
   return getTask(id);
@@ -129,22 +138,32 @@ export async function deleteTask(id: string): Promise<void> {
   });
 }
 
-export async function linkMergeRequest(taskId: string, mergeRequestId: string): Promise<Task> {
+export async function linkMergeRequest(
+  taskId: string,
+  mergeRequestId: string,
+  actorId: string | null = null,
+): Promise<Task> {
   await inTransaction(async (db) => {
     if (!(await findTaskCore(taskId, db))) throw AppError.notFound('Task');
     if (!(await mergeRequestExists(mergeRequestId, db))) throw AppError.notFound('Merge request');
     await linkMr(taskId, mergeRequestId, db);
+    if (actorId) await patchTask(taskId, { updatedById: actorId }, db);
     await recalculateTaskStatus(taskId, db);
   });
   return getTask(taskId);
 }
 
-export async function unlinkMergeRequest(taskId: string, mergeRequestId: string): Promise<Task> {
+export async function unlinkMergeRequest(
+  taskId: string,
+  mergeRequestId: string,
+  actorId: string | null = null,
+): Promise<Task> {
   await inTransaction(async (db) => {
     if (!(await findTaskCore(taskId, db))) throw AppError.notFound('Task');
     if (!(await unlinkMr(taskId, mergeRequestId, db))) {
       throw AppError.notFound('Merge request link');
     }
+    if (actorId) await patchTask(taskId, { updatedById: actorId }, db);
     await recalculateTaskStatus(taskId, db);
   });
   return getTask(taskId);
