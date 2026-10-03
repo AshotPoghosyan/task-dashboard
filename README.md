@@ -76,14 +76,15 @@ next to `mrdash`; the test URL is already in `.env.example`. E2E needs
 ## Production with Docker
 
 ```bash
-cp .env.example .env     # set DASHBOARD_PASSWORD, SESSION_SECRET, tokens, webhook secrets
+cp .env.example .env     # set DASHBOARD_PASSWORD, SESSION_SECRET, tokens, webhook secrets,
+                         # and WEB_ORIGIN=http://localhost:8080 (the example value is for dev)
 export POSTGRES_PASSWORD=$(openssl rand -hex 16)   # keep it: the database volume uses it
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
 Starts Postgres, a one-shot `migrate` job, the API (non-root, `/api/health` healthcheck) and
 nginx serving the SPA on <http://localhost:8080> and proxying `/api` (including SSE). Set
-`WEB_ORIGIN` to the public URL. Terminate TLS in a reverse proxy in front of the `web`
+`WEB_ORIGIN` in `.env` to the URL users open (the `.env.example` value points at the dev server, port 5173). You can also put `POSTGRES_PASSWORD` in `.env` instead of exporting it. Terminate TLS in a reverse proxy in front of the `web`
 service; session cookies are `Secure` outside development. Webhook URLs are then
 `https://<host>/api/webhooks/{gitlab,github}`. `DATABASE_URL` is set by the compose file.
 
