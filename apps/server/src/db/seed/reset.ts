@@ -1,6 +1,8 @@
 import type { PrismaClient } from '@prisma/client';
 
 const TABLES = [
+  'sessions',
+  'users',
   'task_merge_requests',
   'tasks',
   'merge_request_reviewers',

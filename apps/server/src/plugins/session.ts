@@ -40,3 +40,26 @@ export function readCookie(header: string | undefined, name: string): string | u
   }
   return undefined;
 }
+
+/** `<value>.<hmac>`; used for cookies that carry a random token or short-lived OAuth state. */
+export const signValue = (secret: string, value: string): string =>
+  `${value}.${sign(secret, value)}`;
+
+/** Returns the value when the signature matches, else undefined. */
+export function unsignValue(secret: string, signed: string): string | undefined {
+  const idx = signed.lastIndexOf('.');
+  if (idx <= 0) return undefined;
+  const value = signed.slice(0, idx);
+  return safeEqual(sign(secret, value), signed.slice(idx + 1)) ? value : undefined;
+}
+
+export const SID_COOKIE = 'mrdash_sid';
+
+/** A `Set-Cookie` value. `maxAge` 0 clears the cookie. */
+export function serializeCookie(
+  name: string,
+  value: string,
+  o: { maxAge: number; sameSite: 'Lax' | 'Strict'; secure: boolean; path?: string },
+): string {
+  return `${name}=${value}; Path=${o.path ?? '/'}; HttpOnly; SameSite=${o.sameSite}${o.secure ? '; Secure' : ''}; Max-Age=${o.maxAge}`;
+}

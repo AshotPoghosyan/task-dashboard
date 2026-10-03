@@ -32,13 +32,18 @@ export const taskRoutes: FastifyPluginAsync = async (app) => {
   });
 
   app.post('/api/tasks', async (request, reply) => {
-    const task = await createTask(createTaskSchema.parse(request.body));
+    const task = await createTask(
+      createTaskSchema.parse(request.body),
+      request.authUser?.id ?? null,
+    );
     return reply.code(201).send(taskSchema.parse(task));
   });
 
   app.patch('/api/tasks/:id', async (request) => {
     const { id } = idParamSchema.parse(request.params);
-    return taskSchema.parse(await updateTask(id, updateTaskSchema.parse(request.body)));
+    return taskSchema.parse(
+      await updateTask(id, updateTaskSchema.parse(request.body), request.authUser?.id ?? null),
+    );
   });
 
   app.delete('/api/tasks/:id', async (request, reply) => {
@@ -50,11 +55,13 @@ export const taskRoutes: FastifyPluginAsync = async (app) => {
   app.post('/api/tasks/:id/merge-requests', async (request) => {
     const { id } = idParamSchema.parse(request.params);
     const { mergeRequestId } = linkMergeRequestSchema.parse(request.body);
-    return taskSchema.parse(await linkMergeRequest(id, mergeRequestId));
+    return taskSchema.parse(
+      await linkMergeRequest(id, mergeRequestId, request.authUser?.id ?? null),
+    );
   });
 
   app.delete('/api/tasks/:id/merge-requests/:mrId', async (request) => {
     const { id, mrId } = taskMergeRequestParamSchema.parse(request.params);
-    return taskSchema.parse(await unlinkMergeRequest(id, mrId));
+    return taskSchema.parse(await unlinkMergeRequest(id, mrId, request.authUser?.id ?? null));
   });
 };

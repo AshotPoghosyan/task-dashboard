@@ -1,5 +1,11 @@
 import { z } from 'zod';
-import { mrStatusSchema, providerSchema, taskStatusSchema, taskTypeSchema } from '../enums.js';
+import {
+  mrStatusSchema,
+  providerSchema,
+  taskStatusSchema,
+  taskTypeSchema,
+  userRoleSchema,
+} from '../enums.js';
 import { multiValue, paginationQuerySchema } from './common.js';
 
 const title = z.string().trim().min(1).max(500);
@@ -67,3 +73,14 @@ export type MergeRequestFilters = z.infer<typeof mergeRequestFiltersSchema>;
 
 export const loginSchema = z.object({ password: z.string().min(1).max(500) });
 export type LoginInput = z.infer<typeof loginSchema>;
+
+/** `:provider` URL segment: `github` or `gitlab`, normalised to the enum value. */
+export const providerParamSchema = z.object({
+  provider: z.enum(['github', 'gitlab']).transform((v) => v.toUpperCase() as 'GITHUB' | 'GITLAB'),
+});
+
+export const updateUserSchema = z
+  .object({ role: userRoleSchema, disabled: z.boolean() })
+  .partial()
+  .refine((v) => Object.keys(v).length > 0, { message: 'At least one field is required' });
+export type UpdateUserInput = z.infer<typeof updateUserSchema>;
