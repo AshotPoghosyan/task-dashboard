@@ -44,7 +44,13 @@ export async function api<S extends z.ZodType>(
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const text = await res.text();
-  const json: unknown = text ? JSON.parse(text) : null;
+  let json: unknown = null;
+  try {
+    json = text ? JSON.parse(text) : null;
+  } catch {
+    // Non-JSON body (e.g. a proxy's HTML 502 page): fall through to a typed error below.
+    if (res.ok) throw new ApiError(res.status, 'INVALID_RESPONSE', 'Server returned invalid JSON');
+  }
   if (!res.ok) {
     const parsed = errorResponseSchema.safeParse(json);
     throw parsed.success

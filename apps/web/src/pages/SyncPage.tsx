@@ -1,6 +1,6 @@
-import { format } from 'date-fns';
 import { RefreshCw } from 'lucide-react';
 import { useSyncStatus, useTriggerSync } from '../api/sync';
+import { formatDateTime } from '../lib/datetime';
 import { Button } from '../components/ui/Button';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Skeleton } from '../components/ui/Skeleton';
@@ -45,7 +45,7 @@ export default function SyncPage() {
               <span className="flex-1 text-fg">{r.fullPath}</span>
               {r.lastRun?.error ? <span className="text-danger">{r.lastRun.error}</span> : null}
               <span className="tabular text-fg-secondary">
-                {r.lastSyncedAt ? format(new Date(r.lastSyncedAt), 'PPpp') : 'Never synced'}
+                {r.lastSyncedAt ? formatDateTime(r.lastSyncedAt) : 'Never synced'}
               </span>
             </li>
           ))}

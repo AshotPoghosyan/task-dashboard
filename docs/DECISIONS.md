@@ -66,3 +66,8 @@ Incremental fetches start 60 s before `lastSyncedAt`, and the inline trigger ign
 - **Dev-only `/dev/components`** route is registered only when `import.meta.env.DEV`; in production it is unreachable (the bundler still emits its unused chunk).
 - **Tasks and Merge Requests pages are placeholders**; their tables are Phases 8–9. `/sync` shows per-repo sync status and a "Sync now" button.
 - **Axe test disables `color-contrast`** because jsdom has no layout/colors; contrast is addressed by the token palette.
+
+## 2026-10-03 — Phase 7 senior review
+
+- **Web display timezone** comes from `VITE_APP_TIMEZONE` (default `Asia/Yerevan`, same default as the server's `APP_TIMEZONE`) via `lib/datetime.ts` (`Intl.DateTimeFormat`), instead of the browser's local zone. The server does not expose its timezone to the client yet.
+- **A 401 on any query/mutation invalidates the session query**, so an expired cookie sends the user to `/login` via the route guard rather than showing per-page errors.

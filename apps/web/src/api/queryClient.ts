@@ -1,8 +1,11 @@
-import { QueryClient } from '@tanstack/react-query';
+import { QueryCache, QueryClient, MutationCache } from '@tanstack/react-query';
 import { ApiError } from './client';
 
 export function createQueryClient(): QueryClient {
-  return new QueryClient({
+  const client: QueryClient = new QueryClient({
+    // An expired session mid-use: refetch the session so the route guard redirects to /login.
+    queryCache: new QueryCache({ onError: (err, query) => onUnauthorized(err, query.queryKey) }),
+    mutationCache: new MutationCache({ onError: (err) => onUnauthorized(err) }),
     defaultOptions: {
       queries: {
         staleTime: 30_000,
@@ -13,4 +16,10 @@ export function createQueryClient(): QueryClient {
       },
     },
   });
+  function onUnauthorized(err: unknown, key?: readonly unknown[]) {
+    if (err instanceof ApiError && err.status === 401 && key?.[0] !== 'session') {
+      void client.invalidateQueries({ queryKey: ['session'] });
+    }
+  }
+  return client;
 }
