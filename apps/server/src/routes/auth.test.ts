@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
+import { loadEnv } from '../config/env.js';
 import { disconnectPrisma } from '../db/prisma.js';
 import { createSessionToken, verifySessionToken } from '../plugins/session.js';
 import { makeApp } from '../test/factories.js';
@@ -136,6 +137,34 @@ describe('behind a reverse proxy', () => {
     expect((await get('10.0.0.1')).statusCode).toBe(429);
     expect((await get('10.0.0.2')).statusCode).toBe(200);
     await proxied.close();
+  });
+});
+
+describe('proxy trust edges', () => {
+  const get = (a: FastifyInstance, xff: string) =>
+    a.inject({ method: 'GET', url: '/api/repositories', headers: { 'x-forwarded-for': xff } });
+
+  it('ignores X-Forwarded-For entirely when TRUST_PROXY_HOPS=0', async () => {
+    const direct = await makeApp({ RATE_LIMIT_MAX: '2' });
+    expect((await get(direct, '10.0.0.1')).statusCode).toBe(200);
+    expect((await get(direct, '10.0.0.2')).statusCode).toBe(200);
+    expect((await get(direct, '10.0.0.3')).statusCode).toBe(429);
+    await direct.close();
+  });
+
+  it('cannot be evaded by a client-spoofed leading X-Forwarded-For entry', async () => {
+    const proxied = await makeApp({ RATE_LIMIT_MAX: '2', TRUST_PROXY_HOPS: '1' });
+    // nginx appends the real peer (10.0.0.9) after whatever the client sent.
+    expect((await get(proxied, '1.1.1.1, 10.0.0.9')).statusCode).toBe(200);
+    expect((await get(proxied, '2.2.2.2, 10.0.0.9')).statusCode).toBe(200);
+    expect((await get(proxied, '3.3.3.3, 10.0.0.9')).statusCode).toBe(429);
+    await proxied.close();
+  });
+
+  it('rejects a negative TRUST_PROXY_HOPS at boot', () => {
+    expect(() => loadEnv({ DATABASE_URL: 'x', TRUST_PROXY_HOPS: '-1' })).toThrow(
+      /TRUST_PROXY_HOPS/,
+    );
   });
 });
 
