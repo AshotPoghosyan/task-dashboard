@@ -29,6 +29,19 @@ const patchBodies = (calls: ReturnType<typeof stubApi>['calls']) =>
   calls.filter((c) => c.init?.method === 'PATCH').map((c) => JSON.parse(String(c.init?.body)));
 
 describe('TaskDrawer', () => {
+  it('tells the user when the status was set manually', () => {
+    stubApi({});
+    const render = (task: ReturnType<typeof makeTask>) =>
+      renderWithProviders(
+        <TaskDrawer task={task} onClose={noop} onEdit={noop} onAddSubBug={noop} />,
+      );
+    const { unmount } = render(makeTask('t1', { statusOverride: 'CLOSED' }));
+    expect(screen.getByText('set manually')).toBeInTheDocument();
+    unmount();
+    render(makeTask('t2'));
+    expect(screen.queryByText('set manually')).toBeNull();
+  });
+
   it('autosaves notes after the debounce, once', async () => {
     const task = makeTask('t1', { notes: 'old' });
     const { calls } = stubApi({

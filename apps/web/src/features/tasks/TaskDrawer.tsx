@@ -55,7 +55,12 @@ export function TaskDrawer({ task, onClose, onEdit, onAddSubBug }: Props) {
 
             <dl className="flex flex-col gap-2">
               <Row label="Status">
-                <StatusBadge status={task.status} />
+                <span className="flex items-center gap-2">
+                  <StatusBadge status={task.status} />
+                  {task.statusOverride ? (
+                    <span className="text-xs text-fg-muted">set manually</span>
+                  ) : null}
+                </span>
               </Row>
               <Row label="Type">{task.type.toLowerCase()}</Row>
               <Row label="Assignee">{task.assigneeName ?? 'Unassigned'}</Row>
@@ -65,9 +70,7 @@ export function TaskDrawer({ task, onClose, onEdit, onAddSubBug }: Props) {
             </dl>
 
             <div className="flex flex-col gap-1">
-              <span id="override-label" className="text-xs font-medium text-fg-secondary">
-                Status override
-              </span>
+              <span className="text-xs font-medium text-fg-secondary">Status override</span>
               <Select
                 aria-label="Status override"
                 value={task.statusOverride ?? AUTO}
