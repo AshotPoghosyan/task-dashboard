@@ -32,26 +32,27 @@ run it against a database you care about.
 Config is validated at boot by `apps/server/src/config/env.ts`; the server refuses to start on
 invalid values.
 
-| Variable                | Default                 | Description                                                |
-| ----------------------- | ----------------------- | ---------------------------------------------------------- |
-| `NODE_ENV`              | `development`           | `development`, `test` or `production`                      |
-| `PORT`                  | `4000`                  | API port                                                   |
-| `WEB_ORIGIN`            | `http://localhost:5173` | Allowed CORS origin (the URL users open)                   |
-| `DATABASE_URL`          | required                | PostgreSQL connection string                               |
-| `DATABASE_URL_TEST`     | -                       | Database for integration tests and E2E                     |
-| `APP_TIMEZONE`          | `Asia/Yerevan`          | IANA timezone for display and "today" boundaries           |
-| `DASHBOARD_PASSWORD`    | empty (no auth)         | Shared password protecting `/api/*`                        |
-| `SESSION_SECRET`        | empty                   | Cookie signing key, 16+ chars when a password is set       |
-| `GITLAB_BASE_URL`       | `https://gitlab.com`    | GitLab instance URL                                        |
-| `GITLAB_TOKEN`          | empty                   | Token with `read_api` scope                                |
-| `GITLAB_WEBHOOK_SECRET` | empty                   | Secret token; empty rejects all GitLab webhooks            |
-| `GITHUB_TOKEN`          | empty                   | Fine-grained token: Pull requests read, Metadata read      |
-| `GITHUB_WEBHOOK_SECRET` | empty                   | HMAC secret; empty rejects all GitHub webhooks             |
-| `SYNC_INTERVAL_MINUTES` | `5`                     | Periodic sync interval per active repository               |
-| `RATE_LIMIT_MAX`        | `300`                   | Requests per minute per client (login is limited to 5/min) |
-| `LOG_LEVEL`             | `info`                  | pino level                                                 |
-| `POSTGRES_PASSWORD`     | required (prod compose) | Only read by `docker-compose.prod.yml`                     |
-| `WEB_PORT`              | `8080`                  | Only read by `docker-compose.prod.yml`: published web port |
+| Variable                | Default                 | Description                                                                 |
+| ----------------------- | ----------------------- | --------------------------------------------------------------------------- |
+| `NODE_ENV`              | `development`           | `development`, `test` or `production`                                       |
+| `PORT`                  | `4000`                  | API port                                                                    |
+| `WEB_ORIGIN`            | `http://localhost:5173` | Allowed CORS origin (the URL users open)                                    |
+| `DATABASE_URL`          | required                | PostgreSQL connection string                                                |
+| `DATABASE_URL_TEST`     | -                       | Database for integration tests and E2E                                      |
+| `APP_TIMEZONE`          | `Asia/Yerevan`          | IANA timezone for display and "today" boundaries                            |
+| `DASHBOARD_PASSWORD`    | empty (no auth)         | Shared password protecting `/api/*`                                         |
+| `SESSION_SECRET`        | empty                   | Cookie signing key, 16+ chars when a password is set                        |
+| `GITLAB_BASE_URL`       | `https://gitlab.com`    | GitLab instance URL                                                         |
+| `GITLAB_TOKEN`          | empty                   | Token with `read_api` scope                                                 |
+| `GITLAB_WEBHOOK_SECRET` | empty                   | Secret token; empty rejects all GitLab webhooks                             |
+| `GITHUB_TOKEN`          | empty                   | Fine-grained token: Pull requests read, Metadata read                       |
+| `GITHUB_WEBHOOK_SECRET` | empty                   | HMAC secret; empty rejects all GitHub webhooks                              |
+| `SYNC_INTERVAL_MINUTES` | `5`                     | Periodic sync interval per active repository                                |
+| `RATE_LIMIT_MAX`        | `300`                   | Requests per minute per client (login is limited to 5/min)                  |
+| `TRUST_PROXY_HOPS`      | `0`                     | Trusted reverse-proxy hops for client IP (rate limits); prod compose sets 1 |
+| `LOG_LEVEL`             | `info`                  | pino level                                                                  |
+| `POSTGRES_PASSWORD`     | required (prod compose) | Only read by `docker-compose.prod.yml`                                      |
+| `WEB_PORT`              | `8080`                  | Only read by `docker-compose.prod.yml`: published web port                  |
 
 ## Scripts
 

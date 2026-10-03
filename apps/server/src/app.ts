@@ -37,6 +37,7 @@ export interface AppDeps {
 
 export async function buildApp(env: Env, deps: AppDeps = {}): Promise<FastifyInstance> {
   const app = Fastify({
+    trustProxy: env.TRUST_PROXY_HOPS > 0 ? (_address, hop) => hop < env.TRUST_PROXY_HOPS : false,
     genReqId: (req) => {
       const header = req.headers['x-request-id'];
       return typeof header === 'string' && header ? header : randomUUID();

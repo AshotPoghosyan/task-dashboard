@@ -122,6 +122,23 @@ describe('auth enabled', () => {
   });
 });
 
+describe('behind a reverse proxy', () => {
+  it('rate limits per forwarded client IP when TRUST_PROXY_HOPS=1', async () => {
+    const proxied = await makeApp({ RATE_LIMIT_MAX: '2', TRUST_PROXY_HOPS: '1' });
+    const get = (ip: string) =>
+      proxied.inject({
+        method: 'GET',
+        url: '/api/repositories',
+        headers: { 'x-forwarded-for': ip },
+      });
+    expect((await get('10.0.0.1')).statusCode).toBe(200);
+    expect((await get('10.0.0.1')).statusCode).toBe(200);
+    expect((await get('10.0.0.1')).statusCode).toBe(429);
+    expect((await get('10.0.0.2')).statusCode).toBe(200);
+    await proxied.close();
+  });
+});
+
 describe('session tokens', () => {
   it('expire and reject malformed values', () => {
     const now = 1_000_000;

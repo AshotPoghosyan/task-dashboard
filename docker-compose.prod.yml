@@ -40,6 +40,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 4000
+      TRUST_PROXY_HOPS: 1 # nginx; raise to 2 if a TLS proxy sits in front of it
       DATABASE_URL: postgresql://app:${POSTGRES_PASSWORD}@postgres:5432/mrdash
       WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:8080}
     depends_on:

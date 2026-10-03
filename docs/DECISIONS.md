@@ -132,3 +132,4 @@ Incremental fetches start 60 s before `lastSyncedAt`, and the inline trigger ign
 - **Prisma CLI scripts load the root `.env`** through `node --env-file-if-exists=../../.env node_modules/prisma/build/index.js`. Prisma only reads `.env` from the app directory, so `pnpm db:migrate:deploy` ignored the root `.env` file the README tells users to create.
 - **`docker-compose.prod.yml` requires `POSTGRES_PASSWORD`** (no default password) and overrides `DATABASE_URL`, `PORT`, `NODE_ENV` after `env_file: .env`.
 - **README has no committed screenshots**; the agent cannot commit binary captures reliably. It points to the seed data and the two pages instead.
+- **`TRUST_PROXY_HOPS` env (default 0)** added in senior review. Behind nginx every request came from the proxy IP, so the login limit (5/min) and global limit were shared by all users. The prod compose sets 1; a hop count (not `true`) stops clients spoofing `X-Forwarded-For`.
