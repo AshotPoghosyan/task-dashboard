@@ -1,0 +1,34 @@
+[
+  {
+    "user": {
+      "id": 22,
+      "login": "bob",
+      "avatar_url": "https://avatars.example/22"
+    },
+    "state": "COMMENTED"
+  },
+  {
+    "user": {
+      "id": 22,
+      "login": "bob",
+      "avatar_url": "https://avatars.example/22"
+    },
+    "state": "APPROVED"
+  },
+  {
+    "user": {
+      "id": 23,
+      "login": "carol",
+      "avatar_url": "https://avatars.example/23"
+    },
+    "state": "CHANGES_REQUESTED"
+  },
+  {
+    "user": {
+      "id": 21,
+      "login": "alice",
+      "avatar_url": "https://avatars.example/21"
+    },
+    "state": "COMMENTED"
+  }
+]
