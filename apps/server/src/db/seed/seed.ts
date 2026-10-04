@@ -52,7 +52,7 @@ export async function seed(now: Date = new Date()): Promise<void> {
           externalId: `u-${i + 1}`,
           username,
           displayName: username.charAt(0).toUpperCase() + username.slice(1),
-          avatarUrl: `https://example.com/avatars/${username}.png`,
+          avatarUrl: null, // initials fallback in the UI; seed data uses no external URLs
         },
       });
     }),

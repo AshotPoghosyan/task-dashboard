@@ -1,34 +1,29 @@
 import { useStats } from '../../api/tasks';
 import { StatCard } from '../../components/data/StatCard';
-import type { Filters } from '../../hooks/useUrlFilters';
-import { sameSet, STAT_FILTERS } from './filters';
+import type { TaskTab } from './tabs';
 
 interface Props {
-  filters: Filters;
-  /** Replaces the status filter; selecting an already-active card clears it. */
-  onStatus: (status: string[]) => void;
+  tab: TaskTab;
+  /** Clicking a card switches to the matching status tab; clicking the active one goes back to All. */
+  onTab: (tab: TaskTab) => void;
 }
 
-export function TaskStats({ filters, onStatus }: Props) {
+export function TaskStats({ tab, onTab }: Props) {
   const { data, isPending } = useStats();
-  const current = filters.status ?? [];
-  const card = (label: string, value: number | undefined, statuses: readonly string[]) => {
-    const active = sameSet(current, statuses);
-    return (
-      <StatCard
-        label={label}
-        value={value}
-        loading={isPending}
-        active={active}
-        onClick={() => onStatus(active ? [] : [...statuses])}
-      />
-    );
-  };
+  const card = (label: string, value: number | undefined, target: TaskTab) => (
+    <StatCard
+      label={label}
+      value={value}
+      loading={isPending}
+      active={tab === target}
+      onClick={() => onTab(tab === target ? 'all' : target)}
+    />
+  );
   return (
-    <section aria-label="Statistics" className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-      {card('Total Open MRs', data?.openMrs, STAT_FILTERS.open)}
-      {card('Pending Reviews', data?.pendingReviews, STAT_FILTERS.review)}
-      {card('Merged Today', data?.mergedToday, STAT_FILTERS.merged)}
+    <section aria-label="Statistics" className="grid grid-cols-3 gap-3">
+      {card('Open MRs', data?.openMrs, 'open')}
+      {card('Pending reviews', data?.pendingReviews, 'in-review')}
+      {card('Merged today', data?.mergedToday, 'merged')}
     </section>
   );
 }

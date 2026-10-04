@@ -28,6 +28,47 @@
   --radius-card: 8px;
   --radius-control: 6px;
   --motion: 150ms ease-out;
+
+  /* Avatar fallback circles: background and text are picked per name (see lib/avatar.ts). */
+  --avatar-0: #3b4a8f;
+  --avatar-1: #1f6f6b;
+  --avatar-2: #8a4a2f;
+  --avatar-3: #6b3f8f;
+  --avatar-4: #2f6b3a;
+  --avatar-5: #8f3b5e;
+  --avatar-fg: #f4f5f9;
+}
+
+/* Light palette: set on <html data-theme="light"> by the inline script in index.html. Text
+   and status colors are darkened so they keep WCAG AA contrast on white and tinted surfaces. */
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f4f6fa;
+  --surface: #ffffff;
+  --raised: #eef1f6;
+  --border: #d3d8e3;
+  --fg: #12151c;
+  --fg-secondary: #444d60;
+  --fg-muted: #5a6479;
+  --accent: #3f4bd0;
+  --accent-fg: #ffffff;
+  --danger: #b42318;
+  --success: #17692f;
+
+  --status-merged: #6a3fc0;
+  --status-in-review: #8a4f00;
+  --status-open: #17692f;
+  --status-draft: #475569;
+  --status-closed: #b42318;
+  --status-no-mr: #4b5568;
+
+  --avatar-0: #c9d2fb;
+  --avatar-1: #bfe8e4;
+  --avatar-2: #f5d3c0;
+  --avatar-3: #e4cdf5;
+  --avatar-4: #c9ecd0;
+  --avatar-5: #f5c9dc;
+  --avatar-fg: #1d2233;
 }
 
 @theme inline {
@@ -49,6 +90,13 @@
   --color-status-draft: var(--status-draft);
   --color-status-closed: var(--status-closed);
   --color-status-no-mr: var(--status-no-mr);
+  --color-avatar-0: var(--avatar-0);
+  --color-avatar-1: var(--avatar-1);
+  --color-avatar-2: var(--avatar-2);
+  --color-avatar-3: var(--avatar-3);
+  --color-avatar-4: var(--avatar-4);
+  --color-avatar-5: var(--avatar-5);
+  --color-avatar-fg: var(--avatar-fg);
   --radius-card: var(--radius-card);
   --radius-control: var(--radius-control);
 }

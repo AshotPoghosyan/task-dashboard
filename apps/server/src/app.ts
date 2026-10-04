@@ -66,7 +66,7 @@ export async function buildApp(env: Env, deps: AppDeps = {}): Promise<FastifyIns
   await app.register(authRoutes, { env, oauth: deps.oauth ?? createOAuthRegistry(env) });
   await app.register(userRoutes);
   await app.register(taskRoutes);
-  await app.register(mergeRequestRoutes);
+  await app.register(mergeRequestRoutes, { env });
   await app.register(lookupRoutes, { env });
   const providers = deps.providers ?? createProviderRegistry(env);
   const trigger = deps.syncTrigger ?? createInlineTrigger({ providers, logger: app.log });

@@ -1,12 +1,14 @@
-import { MR_STATUSES, PROVIDERS, STATUS_DISPLAY, type FilterOptions } from '@mrdash/shared';
+import { PROVIDERS, type FilterOptions } from '@mrdash/shared';
 import type { MrQuery } from '../../api/mergeRequests';
 import type { FilterChip } from '../../components/data/FilterBar';
+import type { FilterDef } from '../../components/data/MoreFilters';
 import type { Filters } from '../../hooks/useUrlFilters';
+import { tabQuery, type MrTab } from './tabs';
 
+/** Secondary filters; they live behind "More filters". Status is the tab, search is the top bar. */
 export const FILTER_KEYS = [
   'provider',
   'repositoryId',
-  'status',
   'authorId',
   'assigneeId',
   'reviewerId',
@@ -26,7 +28,6 @@ const PROVIDER_LABELS: Record<(typeof PROVIDERS)[number], string> = {
 export const FILTER_LABELS: Record<(typeof FILTER_KEYS)[number], string> = {
   provider: 'Provider',
   repositoryId: 'Repository',
-  status: 'Status',
   authorId: 'Author',
   assigneeId: 'Assignee',
   reviewerId: 'Reviewer',
@@ -39,13 +40,15 @@ export function optionsByKey(data?: FilterOptions): Record<string, Option[]> {
   return {
     provider: PROVIDERS.map((p) => ({ value: p, label: PROVIDER_LABELS[p] })),
     repositoryId: (data?.repositories ?? []).map((r) => ({ value: r.id, label: r.fullPath })),
-    status: MR_STATUSES.map((s) => ({ value: s, label: STATUS_DISPLAY[s].label })),
     authorId: users,
     assigneeId: users,
     reviewerId: users,
     targetBranch: (data?.branches ?? []).map((b) => ({ value: b, label: b })),
   };
 }
+
+export const filterDefs = (options: Record<string, Option[]>): FilterDef[] =>
+  FILTER_KEYS.map((key) => ({ key, label: FILTER_LABELS[key], options: options[key] ?? [] }));
 
 export function buildChips(
   filters: Filters,
@@ -63,7 +66,19 @@ export function buildChips(
   return chips;
 }
 
-export function toQuery(filters: Filters, search: string): MrQuery {
+interface QueryParts {
+  tab: MrTab;
+  /** Git user id of the current user, when known. */
+  me: string | undefined;
+  mine: boolean;
+}
+
+/** The filter part of the query: no status or view, so it also serves the tab counts. */
+export function toFilterQuery(
+  filters: Filters,
+  search: string,
+  { me, mine }: Pick<QueryParts, 'me' | 'mine'>,
+): Omit<MrQuery, 'status' | 'view'> {
   const pick = <T extends string>(key: string, allowed?: readonly T[]) => {
     const v = (filters[key] ?? []).filter(
       (x) => !allowed || (allowed as readonly string[]).includes(x),
@@ -72,15 +87,27 @@ export function toQuery(filters: Filters, search: string): MrQuery {
   };
   return {
     provider: pick('provider', PROVIDERS),
-    status: pick('status', MR_STATUSES),
     repositoryId: pick('repositoryId'),
     authorId: pick('authorId'),
     assigneeId: pick('assigneeId'),
     reviewerId: pick('reviewerId'),
     targetBranch: pick('targetBranch'),
     q: search || undefined,
+    me,
+    mine: mine && me ? '1' : undefined,
   };
 }
 
-export const hasActiveFilters = (filters: Filters, search: string) =>
-  search !== '' || FILTER_KEYS.some((k) => (filters[k] ?? []).length > 0);
+export const toQuery = (
+  filters: Filters,
+  search: string,
+  parts: QueryParts,
+  order: 'asc' | 'desc',
+): MrQuery => ({
+  ...toFilterQuery(filters, search, parts),
+  ...tabQuery(parts.tab),
+  ...(parts.tab === 'attention' ? {} : { sort: 'updatedAt' as const, order }),
+});
+
+export const hasActiveFilters = (filters: Filters, search: string, mine: boolean) =>
+  mine || search !== '' || FILTER_KEYS.some((k) => (filters[k] ?? []).length > 0);

@@ -28,7 +28,7 @@ function TaskRowView({ row, expanded, selected, onOpen, onRender }: TaskRowProps
       onClick={() => onOpen(task.id)}
       style={{ height: ROW_HEIGHT }}
       className={cn(
-        'grid cursor-pointer items-center gap-3 border-b border-border px-3 text-sm hover:bg-raised',
+        'grid cursor-pointer items-center gap-x-2 border-b border-border px-3 text-sm hover:bg-raised',
         GRID,
         selected && 'bg-raised outline outline-1 -outline-offset-1 outline-accent',
         isSub && 'animate-[row-in_150ms_ease-out]',

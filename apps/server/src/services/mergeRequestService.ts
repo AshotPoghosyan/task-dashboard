@@ -22,7 +22,15 @@ export function buildMergeRequestWhere(f: MergeRequestFilters): Prisma.MergeRequ
   if (f.reviewerId) where.reviewers = { some: { gitUserId: { in: f.reviewerId } } };
   if (f.targetBranch) where.targetBranch = { in: f.targetBranch };
   if (f.q) where.title = { contains: escapeLike(f.q), mode: 'insensitive' };
+  if (f.mine && f.me) where.AND = [mineWhere(f.me)];
   return where;
+}
+
+/** Mine = I am the author, assignee or a reviewer. */
+export function mineWhere(me: string): Prisma.MergeRequestWhereInput {
+  return {
+    OR: [{ authorId: me }, { assigneeId: me }, { reviewers: { some: { gitUserId: me } } }],
+  };
 }
 
 function sortValue(

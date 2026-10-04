@@ -8,6 +8,7 @@ import {
   type OnChangeFn,
 } from '@tanstack/react-table';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { ArrowDown, ArrowUp } from 'lucide-react';
 import { useEffect, useRef, type ProfilerOnRenderCallback } from 'react';
 import { cn } from '../../lib/cn';
 import { columns, GRID } from './columns';
@@ -22,6 +23,9 @@ interface TasksTableProps {
   onOpen: (id: string) => void;
   /** Called when more rows should be fetched (scrolled near the end). */
   onEndReached?: () => void;
+  /** Sort direction of the Updated column. */
+  order?: 'asc' | 'desc';
+  onOrderChange?: (order: 'asc' | 'desc') => void;
   /** Profiler hook, used to verify that expanding re-renders only the toggled row. */
   onRowRender?: ProfilerOnRenderCallback;
 }
@@ -33,6 +37,8 @@ export function TasksTable({
   selectedId,
   onOpen,
   onEndReached,
+  order = 'desc',
+  onOrderChange,
   onRowRender,
 }: TasksTableProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -81,30 +87,50 @@ export function TasksTable({
       ref={scrollRef}
       className="min-h-0 flex-1 overflow-auto rounded-card border border-border bg-surface"
     >
-      <table
-        role="treegrid"
-        aria-label="Tasks"
-        aria-rowcount={rows.length + 1}
-        className="block min-w-fit"
-      >
+      <table role="treegrid" aria-label="Tasks" aria-rowcount={rows.length + 1} className="block">
         <thead role="rowgroup" className="sticky top-0 z-10 block bg-surface">
           {table.getHeaderGroups().map((group) => (
             <tr
               key={group.id}
               role="row"
-              className={cn('grid items-center gap-3 border-b border-border px-3 py-2', GRID)}
+              className={cn('grid items-center gap-x-2 border-b border-border px-3 py-2', GRID)}
             >
               {group.headers.map((h) => (
                 <th
                   key={h.id}
                   role="columnheader"
                   scope="col"
+                  aria-sort={
+                    h.column.id === 'updatedAt'
+                      ? order === 'desc'
+                        ? 'descending'
+                        : 'ascending'
+                      : undefined
+                  }
                   className={cn(
-                    'text-left text-xs font-medium text-fg-secondary',
+                    'min-w-0 truncate text-left text-xs font-medium text-fg-secondary',
                     h.column.columnDef.meta?.className,
                   )}
                 >
-                  {flexRender(h.column.columnDef.header, h.getContext())}
+                  {h.column.id === 'updatedAt' ? (
+                    <button
+                      type="button"
+                      onClick={() => onOrderChange?.(order === 'desc' ? 'asc' : 'desc')}
+                      className="inline-flex items-center gap-1 hover:text-fg"
+                    >
+                      Updated
+                      {order === 'desc' ? (
+                        <ArrowDown size={12} aria-hidden="true" />
+                      ) : (
+                        <ArrowUp size={12} aria-hidden="true" />
+                      )}
+                      <span className="sr-only">
+                        {order === 'desc' ? 'newest first' : 'oldest first'}
+                      </span>
+                    </button>
+                  ) : (
+                    flexRender(h.column.columnDef.header, h.getContext())
+                  )}
                 </th>
               ))}
             </tr>

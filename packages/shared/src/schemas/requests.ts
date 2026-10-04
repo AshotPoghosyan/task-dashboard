@@ -46,7 +46,18 @@ const q = z.preprocess(
   z.string().trim().max(200).optional(),
 );
 
+/** `?mine=1` / `?mine=true` switches a "mine" filter on; anything else is off. */
+const flag = z.preprocess((v) => v === '1' || v === 'true' || v === true, z.boolean());
+
+export const TASK_SORT_FIELDS = ['updatedAt', 'createdAt', 'sortOrder'] as const;
+
 export const taskFiltersSchema = paginationQuerySchema.extend({
+  /** Only mine: needs `me`. */
+  mine: flag,
+  /** Git user id of the person using the dashboard. */
+  me: z.string().min(1).optional(),
+  sort: z.enum(TASK_SORT_FIELDS).default('updatedAt'),
+  order: z.enum(['asc', 'desc']).default('desc'),
   status: multiValue(taskStatusSchema),
   assignee: multiValue(z.string()),
   targetBranch: multiValue(z.string()),
@@ -57,7 +68,14 @@ export type TaskFilters = z.infer<typeof taskFiltersSchema>;
 
 export const MR_SORT_FIELDS = ['updatedAt', 'createdAt', 'title'] as const;
 
+export const MR_VIEWS = ['attention'] as const;
+
 export const mergeRequestFiltersSchema = paginationQuerySchema.extend({
+  /** `attention` lists what needs action, most urgent first, with a `reasons` array per item. */
+  view: z.enum(MR_VIEWS).optional(),
+  mine: flag,
+  /** Git user id of the person using the dashboard (drives "mine" and review-related reasons). */
+  me: z.string().min(1).optional(),
   provider: multiValue(providerSchema),
   repositoryId: multiValue(z.string()),
   status: multiValue(mrStatusSchema),

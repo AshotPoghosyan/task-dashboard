@@ -3,18 +3,19 @@ import {
   idParamSchema,
   linkMergeRequestSchema,
   paginatedSchema,
+  taskCountsSchema,
   taskFiltersSchema,
   taskMergeRequestParamSchema,
   taskSchema,
   updateTaskSchema,
 } from '@mrdash/shared';
 import type { FastifyPluginAsync } from 'fastify';
+import { getTaskCounts, listTasks } from '../services/taskListService.js';
 import {
   createTask,
   deleteTask,
   getTask,
   linkMergeRequest,
-  listTasks,
   unlinkMergeRequest,
   updateTask,
 } from '../services/taskService.js';
@@ -24,6 +25,10 @@ const taskPageSchema = paginatedSchema(taskSchema);
 export const taskRoutes: FastifyPluginAsync = async (app) => {
   app.get('/api/tasks', async (request) =>
     taskPageSchema.parse(await listTasks(taskFiltersSchema.parse(request.query))),
+  );
+
+  app.get('/api/tasks/counts', async (request) =>
+    taskCountsSchema.parse(await getTaskCounts(taskFiltersSchema.parse(request.query))),
   );
 
   app.get('/api/tasks/:id', async (request) => {

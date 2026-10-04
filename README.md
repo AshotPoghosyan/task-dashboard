@@ -56,11 +56,19 @@ invalid values.
 | `GITHUB_TOKEN`                       | empty                   | Fine-grained token: Pull requests read, Metadata read                        |
 | `GITHUB_WEBHOOK_SECRET`              | empty                   | HMAC secret; empty rejects all GitHub webhooks                               |
 | `SYNC_INTERVAL_MINUTES`              | `5`                     | Periodic sync interval per active repository                                 |
+| `STALE_DAYS`                         | `7`                     | A merge request not updated for longer than this shows as "Stale"            |
 | `RATE_LIMIT_MAX`                     | `300`                   | Requests per minute per client (login is limited to 5/min)                   |
 | `TRUST_PROXY_HOPS`                   | `0`                     | Trusted reverse-proxy hops for client IP (rate limits); prod compose sets 1  |
 | `LOG_LEVEL`                          | `info`                  | pino level                                                                   |
 | `POSTGRES_PASSWORD`                  | required (prod compose) | Only read by `docker-compose.prod.yml`                                       |
 | `WEB_PORT`                           | `8080`                  | Only read by `docker-compose.prod.yml`: published web port                   |
+
+## Using the dashboard
+
+- **Merge Requests** opens on **Needs attention**: reviews waiting on you, changes requested on your MRs, MRs with no reviewer, and stale MRs (see `STALE_DAYS`). Use the other tabs for a status, and the **?** next to the tabs for what each one means.
+- **Only mine** shows your own MRs and tasks. With a personal login it uses your account; with the shared password it asks "Who are you?" once and remembers your choice in this browser (change it from the account menu).
+- **More filters** holds provider, repository, people and branch filters. Active filters appear as chips you can remove.
+- **Theme**: System, Light or Dark from the account menu.
 
 ## Scripts
 

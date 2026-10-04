@@ -9,6 +9,8 @@ type Node = Task | Task['children'][number];
 export type TaskPatch = (task: Node) => Node;
 
 export const tasksKey = ['tasks'] as const;
+/** Kept apart from `tasksKey`: counts are not paged lists, so optimistic list patches skip them. */
+export const taskCountsKey = ['task-counts'] as const;
 const LIST = { queryKey: tasksKey } as const;
 
 function mapPages(data: InfiniteData<TaskPage>, id: string, patch: TaskPatch) {
