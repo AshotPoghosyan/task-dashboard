@@ -3,6 +3,7 @@ import {
   mergeRequestSchema,
   paginatedSchema,
   statsSchema,
+  taskCountsSchema,
   taskSchema,
   type CreateTaskInput,
   type MergeRequestSummary,
@@ -19,12 +20,23 @@ import {
 } from '@tanstack/react-query';
 import { useToast } from '../components/ui/Toast';
 import { api } from './client';
-import { optimisticPatch, tasksKey, type TaskPatch } from './taskCache';
+import { optimisticPatch, taskCountsKey, tasksKey, type TaskPatch } from './taskCache';
 
 const taskPage = paginatedSchema(taskSchema);
 const mrPage = paginatedSchema(mergeRequestSchema);
 
-export type TaskQuery = Pick<TaskFilters, 'status' | 'assignee' | 'targetBranch' | 'type' | 'q'>;
+export type TaskQuery = {
+  status?: TaskFilters['status'];
+  assignee?: TaskFilters['assignee'];
+  targetBranch?: TaskFilters['targetBranch'];
+  type?: TaskFilters['type'];
+  q?: string | undefined;
+  me?: string | undefined;
+  sort?: TaskFilters['sort'];
+  order?: TaskFilters['order'];
+  /** `'1'` limits the list to the current user's tasks (needs `me`). */
+  mine?: '1';
+};
 
 export const useTasks = (filters: TaskQuery) =>
   useInfiniteQuery({
@@ -33,6 +45,14 @@ export const useTasks = (filters: TaskQuery) =>
       api('/tasks', { query: { ...filters, limit: 200, cursor: pageParam }, schema: taskPage }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) => last.nextCursor ?? undefined,
+    placeholderData: keepPreviousData,
+  });
+
+/** Tab badges; `filters` must not carry a status (every tab is one). */
+export const useTaskCounts = (filters: Omit<TaskQuery, 'status' | 'sort' | 'order'>) =>
+  useQuery({
+    queryKey: [...taskCountsKey, filters],
+    queryFn: () => api('/tasks/counts', { query: filters, schema: taskCountsSchema }),
     placeholderData: keepPreviousData,
   });
 
@@ -57,7 +77,9 @@ export const useMergeRequestSearch = (q: string, enabled: boolean) =>
 /** Task edits change stat counts and can add assignees/branches to the filter options. */
 const invalidateTaskData = (qc: QueryClient) =>
   Promise.all(
-    [tasksKey, ['stats'], ['filter-options']].map((queryKey) => qc.invalidateQueries({ queryKey })),
+    [tasksKey, taskCountsKey, ['stats'], ['filter-options']].map((queryKey) =>
+      qc.invalidateQueries({ queryKey }),
+    ),
   );
 
 export function useCreateTask() {

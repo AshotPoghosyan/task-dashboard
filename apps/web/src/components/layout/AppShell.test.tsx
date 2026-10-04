@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axe from 'axe-core';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { ToastProvider } from '../ui/Toast';
 import { AppShell } from './AppShell';
 
 const status = { running: false, providers: { GITLAB: true, GITHUB: true }, repositories: [] };
@@ -14,13 +15,15 @@ function renderShell() {
   );
   return render(
     <QueryClientProvider client={new QueryClient()}>
-      <MemoryRouter>
-        <Routes>
-          <Route element={<AppShell showLogout />}>
-            <Route index element={<h1>Page</h1>} />
-          </Route>
-        </Routes>
-      </MemoryRouter>
+      <ToastProvider>
+        <MemoryRouter>
+          <Routes>
+            <Route element={<AppShell showLogout />}>
+              <Route index element={<h1>Page</h1>} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </ToastProvider>
     </QueryClientProvider>,
   );
 }
@@ -30,7 +33,7 @@ afterEach(() => vi.unstubAllGlobals());
 describe('AppShell', () => {
   it('has no axe violations', async () => {
     const { container } = renderShell();
-    await screen.findByText(/Synced|Never synced/);
+    await screen.findByText(/Synced|Not synced yet/);
     // jsdom cannot compute layout colors, so contrast is checked by token choice, not here.
     const results = await axe.run(container, { rules: { 'color-contrast': { enabled: false } } });
     expect(results.violations).toEqual([]);

@@ -3,7 +3,7 @@ import { Button } from '../../components/ui/Button';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { cn } from '../../lib/cn';
-import { GRID } from './columns';
+import { GRID, SHOW } from './columns';
 import { ROW_HEIGHT } from './TaskRow';
 
 /** Same grid and row height as the table so nothing shifts when data arrives. */
@@ -18,18 +18,15 @@ export function TableSkeleton({ rows = 10 }: { rows?: number }) {
         <div
           key={i}
           style={{ height: ROW_HEIGHT }}
-          className={cn('grid items-center gap-3 border-b border-border px-3', GRID)}
+          className={cn('grid items-center gap-x-2 border-b border-border px-3', GRID)}
         >
           <Skeleton className="h-4 w-16" />
           <Skeleton className="h-4 w-3/4" />
-          <Skeleton className="h-4 w-16" />
-          <Skeleton className="hidden h-4 w-24 lg:block" />
-          <Skeleton className="hidden h-4 w-16 lg:block" />
-          <Skeleton className="hidden h-4 w-20 lg:block" />
-          <Skeleton className="hidden h-4 w-20 lg:block" />
-          <Skeleton className="hidden h-4 w-16 lg:block" />
-          <Skeleton className="hidden h-4 w-16 lg:block" />
-          <Skeleton className="hidden h-4 w-32 lg:block" />
+          <Skeleton className={cn('h-4 w-12', SHOW.type)} />
+          <Skeleton className={cn('h-4 w-24', SHOW.assignee)} />
+          <Skeleton className="h-5 w-16" />
+          <Skeleton className={cn('h-4 w-12', SHOW.linked)} />
+          <Skeleton className={cn('h-4 w-10', SHOW.updated)} />
         </div>
       ))}
     </div>
@@ -54,6 +51,7 @@ export function TableEmpty({
   onClear,
   onCreate,
 }: {
+  /** Some tab, filter or search is narrowing the list. */
   filtered: boolean;
   onClear: () => void;
   onCreate: () => void;
@@ -70,7 +68,7 @@ export function TableEmpty({
         }
         action={
           filtered ? (
-            <Button onClick={onClear}>Clear filters</Button>
+            <Button onClick={onClear}>Show all tasks</Button>
           ) : (
             <Button variant="primary" onClick={onCreate}>
               New task

@@ -66,6 +66,7 @@ export function TaskDrawer({ task, onClose, onEdit, onAddSubBug }: Props) {
               <Row label="Assignee">{task.assigneeName ?? 'Unassigned'}</Row>
               <Row label="Target branch">{task.targetBranch ?? '–'}</Row>
               <Row label="Created">{formatDateTime(task.createdAt)}</Row>
+              <Row label="Updated">{formatDateTime(task.updatedAt)}</Row>
               {task.updatedBy ? (
                 <Row label="Last edited by">
                   {task.updatedBy.displayName}, {formatDateTime(task.updatedAt)}

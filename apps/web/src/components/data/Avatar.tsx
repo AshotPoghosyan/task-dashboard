@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { avatarColorIndex, initials } from '../../lib/avatar';
 import { cn } from '../../lib/cn';
 
 export interface Person {
@@ -5,33 +7,51 @@ export interface Person {
   avatarUrl?: string | null;
 }
 
-const initials = (name: string) =>
-  name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase() ?? '')
-    .join('');
+/** Static class names so Tailwind can see them. */
+const COLORS = [
+  'bg-avatar-0',
+  'bg-avatar-1',
+  'bg-avatar-2',
+  'bg-avatar-3',
+  'bg-avatar-4',
+  'bg-avatar-5',
+];
 
+/**
+ * The person's picture, or their initials on a colored circle when there is no URL or the
+ * image fails to load or is blocked. The wrapper carries the accessible name; the inner image
+ * has an empty alt, so a broken image never shows alt text.
+ */
 export function Avatar({ name, avatarUrl, size = 24 }: Person & { size?: number }) {
-  return avatarUrl ? (
-    <img
-      src={avatarUrl}
-      alt={name}
-      title={name}
-      width={size}
-      height={size}
-      className="rounded-full border border-border object-cover"
-    />
-  ) : (
+  // Remember which URL failed, so a new URL gets a fresh attempt without any effect.
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+
+  const showImage = avatarUrl && failedUrl !== avatarUrl;
+  return (
     <span
       role="img"
       aria-label={name}
       title={name}
-      style={{ width: size, height: size }}
-      className="inline-flex items-center justify-center rounded-full border border-border bg-raised text-[10px] font-medium text-fg-secondary"
+      style={{ width: size, height: size, fontSize: Math.max(9, Math.round(size * 0.42)) }}
+      className={cn(
+        'inline-flex shrink-0 select-none items-center justify-center overflow-hidden rounded-full font-medium text-avatar-fg',
+        showImage ? 'border border-border' : COLORS[avatarColorIndex(name)],
+      )}
     >
-      {initials(name)}
+      {showImage ? (
+        <img
+          src={avatarUrl}
+          alt=""
+          width={size}
+          height={size}
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onError={() => setFailedUrl(avatarUrl)}
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <span aria-hidden="true">{initials(name)}</span>
+      )}
     </span>
   );
 }
@@ -40,7 +60,7 @@ export function AvatarStack({ people, max = 3 }: { people: Person[]; max?: numbe
   const shown = people.slice(0, max);
   const extra = people.length - shown.length;
   return (
-    <div className={cn('flex items-center')}>
+    <div className="flex items-center">
       {shown.map((p, i) => (
         <span key={`${p.name}-${i}`} className="-ml-1.5 first:ml-0">
           <Avatar {...p} />

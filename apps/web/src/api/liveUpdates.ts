@@ -8,9 +8,9 @@ import {
 } from '@mrdash/shared';
 import type { InfiniteData, QueryClient, QueryKey } from '@tanstack/react-query';
 import type { HighlightStore } from './highlights';
-import { mergeRequestsKey } from './mergeRequests';
+import { mergeRequestCountsKey, mergeRequestsKey } from './mergeRequests';
 import { syncStatusKey } from './sync';
-import { tasksKey } from './taskCache';
+import { taskCountsKey, tasksKey } from './taskCache';
 
 interface Page {
   items: MergeRequest[];
@@ -21,11 +21,19 @@ export function affectedKeys(name: SseEventName): QueryKey[] {
   switch (name) {
     case 'mr.updated':
       // A merge request change moves counts and the status of tasks that link it.
-      return [mergeRequestsKey, ['stats'], tasksKey];
+      return [mergeRequestsKey, mergeRequestCountsKey, ['stats'], tasksKey, taskCountsKey];
     case 'task.updated':
-      return [tasksKey, ['stats']];
+      return [tasksKey, taskCountsKey, ['stats']];
     case 'sync.finished':
-      return [mergeRequestsKey, tasksKey, ['stats'], ['filter-options'], syncStatusKey];
+      return [
+        mergeRequestsKey,
+        mergeRequestCountsKey,
+        tasksKey,
+        taskCountsKey,
+        ['stats'],
+        ['filter-options'],
+        syncStatusKey,
+      ];
   }
 }
 

@@ -1,15 +1,13 @@
 import type { AuthUser } from '@mrdash/shared';
-import { ChevronDown, LogOut, Menu, Search } from 'lucide-react';
+import { Menu, Search } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { useLogout } from '../../api/auth';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useHotkeys } from '../../hooks/useHotkeys';
 import { useUrlFilters } from '../../hooks/useUrlFilters';
-import { Avatar } from '../data/Avatar';
 import { Button } from '../ui/Button';
 import { Drawer, DrawerContent, DrawerTrigger, DialogClose } from '../ui/Dialog';
 import { Input } from '../ui/Input';
-import { Popover, PopoverContent, PopoverTrigger } from '../ui/Popover';
+import { AccountMenu } from './AccountMenu';
 import { NavList } from './Sidebar';
 import { SyncIndicator } from './SyncIndicator';
 
@@ -55,41 +53,13 @@ function GlobalSearch() {
   );
 }
 
-/** Avatar + name; opens a small menu with the account details and "Sign out". */
-function UserMenu({ user }: { user: AuthUser }) {
-  const logout = useLogout();
-  return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="ghost" size="sm" aria-label={`Account menu for ${user.displayName}`}>
-          <Avatar name={user.displayName} avatarUrl={user.avatarUrl} size={20} />
-          <span className="hidden max-w-[10rem] truncate sm:inline">{user.displayName}</span>
-          <ChevronDown size={12} aria-hidden="true" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="flex w-56 flex-col gap-2">
-        <div>
-          <p className="truncate font-medium">{user.displayName}</p>
-          <p className="truncate text-xs text-fg-secondary">
-            @{user.username} · {user.provider === 'GITHUB' ? 'GitHub' : 'GitLab'} ·{' '}
-            {user.role === 'ADMIN' ? 'Admin' : 'Member'}
-          </p>
-        </div>
-        <Button variant="secondary" size="sm" onClick={() => logout.mutate()}>
-          <LogOut size={14} aria-hidden="true" /> Sign out
-        </Button>
-      </PopoverContent>
-    </Popover>
-  );
-}
-
 interface TopBarProps {
   showLogout: boolean;
   user?: AuthUser | undefined;
 }
 
+/** Search, sync status and the account menu. */
 export function TopBar({ showLogout, user }: TopBarProps) {
-  const logout = useLogout();
   return (
     <header className="flex h-12 shrink-0 items-center gap-3 border-b border-border bg-surface px-3">
       <Drawer>
@@ -111,13 +81,7 @@ export function TopBar({ showLogout, user }: TopBarProps) {
       <GlobalSearch />
       <div className="ml-auto flex items-center gap-3">
         <SyncIndicator />
-        {user ? (
-          <UserMenu user={user} />
-        ) : showLogout ? (
-          <Button variant="ghost" size="sm" onClick={() => logout.mutate()}>
-            <LogOut size={14} aria-hidden="true" /> Sign out
-          </Button>
-        ) : null}
+        <AccountMenu showLogout={showLogout} user={user} />
       </div>
     </header>
   );

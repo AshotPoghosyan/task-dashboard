@@ -1,14 +1,27 @@
 import { ChevronsDownUp, ChevronsUpDown, Plus } from 'lucide-react';
 import { lazy, Suspense, useCallback, useMemo, useRef, useState } from 'react';
-import { useTasks } from '../../api/tasks';
+import { useFilterOptions, useTaskCounts, useTasks } from '../../api/tasks';
+import { FilterBar } from '../../components/data/FilterBar';
+import { MoreFilters } from '../../components/data/MoreFilters';
+import { StatusTabs, tabPanelProps } from '../../components/data/StatusTabs';
 import { Button } from '../../components/ui/Button';
 import { useUrlFilters } from '../../hooks/useUrlFilters';
-import { FILTER_KEYS, toQuery } from './filters';
+import { useUrlParam } from '../../hooks/useUrlParam';
+import { OnlyMineToggle } from '../me/OnlyMineToggle';
+import { useOnlyMine } from '../me/useOnlyMine';
+import {
+  buildChips,
+  filterDefs,
+  FILTER_KEYS,
+  hasActiveFilters,
+  toFilterQuery,
+  toQuery,
+} from './filters';
 import { allExpanded, findNode, hasChildren, visibleIds, type TaskNode } from './rows';
 import { TableEmpty, TableError, TableSkeleton } from './TableStates';
-import { TaskFilterBar } from './TaskFilterBar';
 import { TaskStats } from './TaskStats';
 import { TasksTable } from './TasksTable';
+import { DEFAULT_TAB, parseTab, TASK_TAB_HELP, taskTabs, type TaskTab } from './tabs';
 import { useTaskHotkeys } from './useTaskHotkeys';
 
 // Loaded on first use: keeps the dialog/drawer code (and form validation) out of the first paint.
@@ -21,7 +34,16 @@ type FormState = { task?: TaskNode; parentId?: string } | null;
 
 export default function TasksPage() {
   const url = useUrlFilters(FILTER_KEYS);
-  const query = useTasks(toQuery(url.filters, url.search));
+  const [tabParam, setTabParam] = useUrlParam('tab');
+  const [orderParam, setOrderParam] = useUrlParam('order');
+  const mine = useOnlyMine();
+  const { data: options } = useFilterOptions();
+  const tab = parseTab(tabParam);
+  const order = orderParam === 'asc' ? 'asc' : 'desc';
+  const parts = { tab, me: mine.me?.id, mine: mine.active };
+  const query = useTasks(toQuery(url.filters, url.search, parts, order));
+  const counts = useTaskCounts(toFilterQuery(url.filters, url.search, parts));
+  const setTab = (next: TaskTab | string) => setTabParam(next === DEFAULT_TAB ? null : next);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [openId, setOpenId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(null);
@@ -52,12 +74,18 @@ export default function TasksPage() {
     if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const filtered = Object.values(url.filters).some((v) => v.length > 0) || url.search !== '';
+  const filtered = hasActiveFilters(url.filters, url.search, mine.active, tab);
+  const clearEverything = () => {
+    url.clearAll();
+    setTab(DEFAULT_TAB);
+    if (mine.pressed) mine.toggle();
+  };
+  const PANEL_ID = 'tasks-panel';
   const anyExpanded = Object.values(expanded).some(Boolean);
   const hasSubBugs = tasks.some((t) => t.children.length > 0);
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4">
+    <div className="flex h-full min-h-0 flex-col gap-3">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Tasks</h1>
         <div className="flex gap-2">
@@ -77,25 +105,52 @@ export default function TasksPage() {
         </div>
       </div>
 
-      <TaskStats filters={url.filters} onStatus={(s) => url.setFilter('status', s)} />
-      <TaskFilterBar {...url} />
+      <TaskStats tab={tab} onTab={setTab} />
 
-      {query.isPending ? (
-        <TableSkeleton />
-      ) : query.isError && !query.data ? (
-        <TableError message={query.error.message} onRetry={() => void query.refetch()} />
-      ) : tasks.length === 0 ? (
-        <TableEmpty filtered={filtered} onClear={url.clearAll} onCreate={() => setForm({})} />
-      ) : (
-        <TasksTable
-          tasks={tasks}
-          expanded={expanded}
-          onExpandedChange={setExpanded}
-          selectedId={selectedId}
-          onOpen={setOpenId}
-          onEndReached={onEndReached}
-        />
-      )}
+      <StatusTabs
+        label="Task status"
+        tabs={taskTabs(counts.data)}
+        value={tab}
+        onChange={setTab}
+        panelId={PANEL_ID}
+        help={TASK_TAB_HELP}
+      />
+
+      <FilterBar
+        chips={buildChips(url.filters, url.search)}
+        onClearAll={url.clearAll}
+        onRemove={(chip) => {
+          if (chip.key === 'q') return url.setSearch('');
+          url.setFilter(
+            chip.key,
+            (url.filters[chip.key] ?? []).filter((v) => v !== (chip.raw ?? chip.value)),
+          );
+        }}
+      >
+        <OnlyMineToggle mine={mine} />
+        <MoreFilters defs={filterDefs(options)} values={url.filters} onChange={url.setFilter} />
+      </FilterBar>
+
+      <div {...tabPanelProps(PANEL_ID, tab)} className="flex min-h-0 flex-1 flex-col">
+        {query.isPending ? (
+          <TableSkeleton />
+        ) : query.isError && !query.data ? (
+          <TableError message={query.error.message} onRetry={() => void query.refetch()} />
+        ) : tasks.length === 0 ? (
+          <TableEmpty filtered={filtered} onClear={clearEverything} onCreate={() => setForm({})} />
+        ) : (
+          <TasksTable
+            tasks={tasks}
+            expanded={expanded}
+            onExpandedChange={setExpanded}
+            selectedId={selectedId}
+            onOpen={setOpenId}
+            onEndReached={onEndReached}
+            order={order}
+            onOrderChange={(o) => setOrderParam(o === 'desc' ? null : o)}
+          />
+        )}
+      </div>
 
       <Suspense fallback={null}>
         {drawerUsed.current ? (

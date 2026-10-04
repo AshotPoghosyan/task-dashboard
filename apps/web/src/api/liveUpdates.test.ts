@@ -22,8 +22,14 @@ function setup(initial: MergeRequest[], next: MergeRequest[]) {
 
 describe('affectedKeys', () => {
   it('limits each event to the queries it can change', () => {
-    expect(affectedKeys('mr.updated')).toEqual([['merge-requests'], ['stats'], ['tasks']]);
-    expect(affectedKeys('task.updated')).toEqual([['tasks'], ['stats']]);
+    expect(affectedKeys('mr.updated')).toEqual([
+      ['merge-requests'],
+      ['merge-request-counts'],
+      ['stats'],
+      ['tasks'],
+      ['task-counts'],
+    ]);
+    expect(affectedKeys('task.updated')).toEqual([['tasks'], ['task-counts'], ['stats']]);
     expect(affectedKeys('sync.finished')).toContainEqual(['sync', 'status']);
     expect(affectedKeys('task.updated')).not.toContainEqual(['merge-requests']);
   });
@@ -42,7 +48,11 @@ describe('applyLiveEvent', () => {
         onStatusChange: vi.fn(),
       },
     );
-    expect(spy.mock.calls.map(([f]) => f?.queryKey)).toEqual([['tasks'], ['stats']]);
+    expect(spy.mock.calls.map(([f]) => f?.queryKey)).toEqual([
+      ['tasks'],
+      ['task-counts'],
+      ['stats'],
+    ]);
   });
 
   it('ignores malformed payloads', async () => {

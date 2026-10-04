@@ -1,9 +1,9 @@
-import { AlertTriangle, GitPullRequest } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, GitPullRequest } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { cn } from '../../lib/cn';
-import { GRID, LOW, ROW_HEIGHT } from './columns';
+import { GRID, ROW_HEIGHT, SHOW } from './columns';
 
 /** Same grid and row height as the table so nothing shifts when data arrives. */
 export function MrSkeleton({ rows = 10 }: { rows?: number }) {
@@ -17,18 +17,17 @@ export function MrSkeleton({ rows = 10 }: { rows?: number }) {
         <div
           key={i}
           style={{ height: ROW_HEIGHT }}
-          className={cn('grid items-center gap-3 border-b border-border px-3', GRID)}
+          className={cn('grid items-center gap-x-2 border-b border-border px-3', GRID)}
         >
-          <Skeleton className="h-4 w-4" />
-          <Skeleton className={cn('h-4 w-24', LOW)} />
-          <Skeleton className={cn('h-4 w-10', LOW)} />
+          <Skeleton className={cn('h-4 w-4', SHOW.toggle)} />
+          <Skeleton className={cn('h-4 w-24', SHOW.mr)} />
           <Skeleton className="h-4 w-3/4" />
-          <Skeleton className={cn('h-4 w-24', LOW)} />
-          <Skeleton className={cn('h-5 w-16', LOW)} />
+          <Skeleton className={cn('h-4 w-24', SHOW.author)} />
+          <Skeleton className={cn('h-5 w-16', SHOW.reviewers)} />
           <Skeleton className="h-5 w-16" />
-          <Skeleton className={cn('h-4 w-32', LOW)} />
-          <Skeleton className={cn('h-4 w-10', LOW)} />
-          <Skeleton className={cn('h-4 w-24', LOW)} />
+          <Skeleton className={cn('h-4 w-16', SHOW.target)} />
+          <Skeleton className={cn('h-4 w-10', SHOW.updated)} />
+          <Skeleton className={cn('h-4 w-20', SHOW.linked)} />
         </div>
       ))}
     </div>
@@ -48,19 +47,36 @@ export function MrError({ message, onRetry }: { message: string; onRetry: () => 
   );
 }
 
-export function MrEmpty({ filtered, onClear }: { filtered: boolean; onClear: () => void }) {
+interface EmptyProps {
+  /** The Needs attention tab: an empty list is good news, not a missing result. */
+  attention: boolean;
+  filtered: boolean;
+  onClear: () => void;
+  onShowAll: () => void;
+}
+
+export function MrEmpty({ attention, filtered, onClear, onShowAll }: EmptyProps) {
   return (
     <div className="rounded-card border border-border bg-surface">
-      <EmptyState
-        icon={<GitPullRequest size={24} />}
-        title={filtered ? 'No merge requests match these filters' : 'No merge requests yet'}
-        description={
-          filtered
-            ? 'Try removing a filter or searching for something else.'
-            : 'Merge requests appear here after the first sync of a repository.'
-        }
-        action={filtered ? <Button onClick={onClear}>Clear filters</Button> : undefined}
-      />
+      {attention && !filtered ? (
+        <EmptyState
+          icon={<CheckCircle2 size={24} />}
+          title="Nothing needs attention right now"
+          description="No reviews waiting on you, no requested changes, and nothing stale."
+          action={<Button onClick={onShowAll}>See all merge requests</Button>}
+        />
+      ) : (
+        <EmptyState
+          icon={<GitPullRequest size={24} />}
+          title={filtered ? 'No merge requests match these filters' : 'No merge requests here yet'}
+          description={
+            filtered
+              ? 'Try removing a filter or searching for something else.'
+              : 'Merge requests appear here after the first sync of a repository.'
+          }
+          action={filtered ? <Button onClick={onClear}>Clear filters</Button> : undefined}
+        />
+      )}
     </div>
   );
 }
