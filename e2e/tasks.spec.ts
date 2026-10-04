@@ -8,24 +8,32 @@ test.describe('Tasks page', () => {
     await expectNoA11yViolations(page);
   });
 
-  test('filters by status and searches', async ({ page }) => {
+  test('filters by status tab and searches', async ({ page }) => {
     await page.goto('/');
     const rows = page.getByRole('treegrid', { name: 'Tasks' }).getByRole('row');
     await expect(rows.nth(1)).toBeVisible();
 
-    await page.getByRole('button', { name: /^Status/ }).click();
-    await page.getByRole('menuitemcheckbox', { name: 'Merged' }).click();
-    await page.keyboard.press('Escape');
-    await expect(page).toHaveURL(/status=MERGED/);
-    await expect(page.getByRole('list', { name: 'Active filters' })).toBeVisible();
+    const merged = page.waitForResponse(
+      (r) => /\/api\/tasks\?/.test(r.url()) && r.url().includes('status=MERGED'),
+    );
+    await page.getByRole('tab', { name: /^Merged/ }).click();
+    await merged;
+    await expect(page).toHaveURL(/tab=merged/);
+    await expect(page.getByRole('tab', { name: /^Merged/ })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
 
-    await page.getByLabel('Search').fill('zzz-no-such-task');
+    await page.getByLabel('Search', { exact: true }).fill('zzz-no-such-task');
     await expect(page).toHaveURL(/q=zzz-no-such-task/);
     await expect(page.getByText('No tasks match')).toBeVisible();
+    await expect(page.getByRole('list', { name: 'Active filters' })).toBeVisible();
 
     await page.getByRole('button', { name: 'Clear all' }).click();
+    await expect(page).not.toHaveURL(/q=/);
+    await page.getByRole('tab', { name: /^All/ }).click();
     await expect(rows.nth(1)).toBeVisible();
-    await expect(page).not.toHaveURL(/status=|q=/);
+    await expect(page).not.toHaveURL(/tab=|q=/);
   });
 
   test('expands sub-bugs', async ({ page }) => {
@@ -51,7 +59,7 @@ test.describe('Tasks page', () => {
     await page.getByLabel('Assignee').fill('E2E Tester');
     await page.getByRole('button', { name: 'Create task' }).click();
 
-    await page.getByLabel('Search').fill(title);
+    await page.getByLabel('Search', { exact: true }).fill(title);
     const row = page.getByRole('row', { name: new RegExp(title) });
     await expect(row).toBeVisible();
 

@@ -56,6 +56,7 @@ invalid values.
 | `GITHUB_TOKEN`                       | empty                   | Fine-grained token: Pull requests read, Metadata read                        |
 | `GITHUB_WEBHOOK_SECRET`              | empty                   | HMAC secret; empty rejects all GitHub webhooks                               |
 | `SYNC_INTERVAL_MINUTES`              | `5`                     | Periodic sync interval per active repository                                 |
+| `STALE_DAYS`                         | `7`                     | A merge request not updated for longer than this shows as "Stale"            |
 | `RATE_LIMIT_MAX`                     | `300`                   | Requests per minute per client (login is limited to 5/min)                   |
 | `TRUST_PROXY_HOPS`                   | `0`                     | Trusted reverse-proxy hops for client IP (rate limits); prod compose sets 1  |
 | `LOG_LEVEL`                          | `info`                  | pino level                                                                   |

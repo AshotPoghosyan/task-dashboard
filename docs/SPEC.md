@@ -282,12 +282,21 @@ All responses validated with shared Zod schemas. Errors use one shape:
 
 - `GET /api/health`: DB + job queue status
 - `GET /api/tasks`: top-level tasks with nested sub-bugs and linked MR summaries.
-  Filters: status, assignee, targetBranch, type, q
+  Filters: status, assignee, targetBranch, type, q, `mine` + `me`. Sort: `updatedAt` desc
+  (default), `createdAt`, `sortOrder`; `order=asc|desc`.
+- `GET /api/tasks/counts`: `{ all, open, inReview, draft, merged, closed, noMr }` for the tab
+  badges. Same filters as the list, except status.
 - `GET /api/tasks/:id`
 - `POST /api/tasks`, `PATCH /api/tasks/:id`, `DELETE /api/tasks/:id`
 - `POST /api/tasks/:id/merge-requests` / `DELETE /api/tasks/:id/merge-requests/:mrId`: link/unlink
 - `GET /api/merge-requests`: filters provider, repositoryId, status, authorId,
-  assigneeId, reviewerId, targetBranch, q. Sort: updatedAt desc (default), createdAt, title
+  assigneeId, reviewerId, targetBranch, q, `mine` + `me`. Sort: updatedAt desc (default), createdAt, title
+  - `view=attention` lists what needs action, most urgent first, and adds `reasons[]` to each
+    item (see "Needs attention" in section 9). `me` is the git user id of the person using the
+    dashboard; without it only the "No reviewer" and "Stale" rules apply.
+  - `mine=1` (with `me`) keeps merge requests where that person is author, assignee or reviewer.
+- `GET /api/merge-requests/counts`: `{ attention, all, open, inReview, draft, merged, closed }`
+  for the tab badges. Same filters as the list, except status and view.
 - `GET /api/stats`: `{ openMrs, pendingReviews, mergedToday, draft, closedThisWeek }`
   - openMrs = DRAFT + OPEN + IN_REVIEW
   - pendingReviews = IN_REVIEW
@@ -308,46 +317,102 @@ All responses validated with shared Zod schemas. Errors use one shape:
 ## 9. UI / UX design
 
 ### Visual language
-- Dark mode only. Calm, dense, professional. Reference quality: Linear, Vercel dashboard.
-- Tokens in `styles/tokens.css`, mapped into the Tailwind theme:
-  - Background `#0B0D12`, surface `#12151C`, raised `#181C25`, border `#232837`
-  - Text primary `#E6E8EE`, secondary `#9AA3B2`, muted `#6B7385`
-  - Accent (brand) `#6E7BFF`
-- Status colors (subtle tinted background + colored text + 1px border, WCAG AA contrast):
-  MERGED purple, IN_REVIEW amber, OPEN green, DRAFT slate, CLOSED red, NO_MR neutral.
+- Dark and light themes. Calm, dense, professional. Reference quality: Linear, Vercel dashboard.
+- Theme setting in the account menu: **System** (default, follows the OS) · Light · Dark. The
+  choice is stored in `localStorage` (`mrdash.theme`) and applied by an inline script in
+  `index.html` before first paint, so there is no flash.
+- Tokens in `styles/tokens.css`, mapped into the Tailwind theme. The dark palette is the default;
+  `<html data-theme="light">` switches to the light palette. Components use token names only.
+  - Dark: background `#0B0D12`, surface `#12151C`, raised `#181C25`, border `#232837`,
+    text `#E6E8EE` / `#9AA3B2` / `#8089A0`, accent `#6E7BFF`
+  - Light: background `#F4F6FA`, surface `#FFFFFF`, raised `#EEF1F6`, border `#D3D8E3`,
+    text `#12151C` / `#444D60` / `#5A6479`, accent `#3F4BD0`
+- Status colors (subtle tinted background + colored text + 1px border, WCAG AA contrast in both
+  themes): MERGED purple, IN_REVIEW amber, OPEN green, DRAFT slate, CLOSED red, NO_MR neutral.
   Each badge also has an icon, so status is never communicated by color alone.
 - Typography: Inter (self-hosted via `@fontsource/inter`), tabular numbers for counts and dates.
 - 4px spacing grid, 8px radius on cards, 6px on inputs and badges. No heavy shadows,
   use borders and surface steps instead.
 - Motion: 150ms ease-out for expand/collapse and hovers. Respect `prefers-reduced-motion`.
+- Guiding rules: show less by default and reveal details on hover, expand or "More filters";
+  one way to do each thing, no duplicated indicators; plain words a developer would say out loud.
+
+### Shared building blocks
+- **Avatar**: the picture, or initials on a colored circle (color derived from the name, readable
+  in both themes) when the URL is missing, fails to load or is blocked. The name is the accessible
+  label; alt text is never rendered. Seed data uses no external avatar URLs.
+- **Status tabs** with counts, state in the URL (`?tab=`), arrow-key navigation, and a "?" button
+  that explains each status in one sentence.
+- **Toolbar**: an **Only mine** toggle and one **More filters** button (popover). Active filters
+  show as removable chips with "Clear all". Search is the top bar search (`/` focuses it) and shows
+  as a chip too.
+- **Sync status** appears once, in the top bar: last synced time (relative, full date on hover),
+  per-repository failures in a popover and a **Sync now** button. When nothing has synced it says
+  "Not synced yet".
+- **Account menu** (top bar): who you are (password mode only), theme, sign out.
 
 ### Layout
 - App shell: collapsible left sidebar (Tasks, Merge Requests, Sync status),
-  top bar with global search and a sync indicator.
-- Responsive: full layout ≥ 1024px. On tablet/mobile the sidebar becomes a drawer and
-  tables drop low-priority columns (branch, dates) into the expanded row.
+  top bar with global search, the sync indicator and the account menu.
+- Responsive: full layout ≥ 1024px. On tablet/mobile the sidebar becomes a drawer.
+- No horizontal page overflow at any width. At ≥ 1280px every column is shown. Below that,
+  low-priority columns are hidden in a fixed order and their values appear in the row's expanded
+  details (Merge Requests) or the details drawer (Tasks). Header labels never overlap.
+- Lists sort by **Updated**, newest first. The date column shows Updated (relative, full date on
+  hover) and its header toggles the direction. The API also sorts by `createdAt`.
 
 ### Tasks page (`/`)
-- Stat cards row: Total Open MRs, Pending Reviews, Merged Today (+ small secondary
-  line such as "3 more than yesterday" when available). Clicking a card applies that filter.
-- Filter bar: search (debounced 250ms, `/` shortcut focuses it), multi-select filters
-  for status, assignee, target branch, type. Active filters shown as removable chips.
-  "Clear all". All filter state stored in URL query params (shareable links).
-- Table: chevron to expand/collapse sub-bugs, sub-bug count pill, expand-all/collapse-all,
-  columns: ID, Title, Type, Assignee (avatar + name), Status, Target branch, Linked MRs,
-  Created, Merged, Notes preview.
-- Sub-bug rows indented with a subtle left guide line.
+- 3 stat cards: Open MRs, Pending reviews, Merged today. Clicking a card selects the matching tab
+  (Open, In review, Merged); clicking it again returns to All.
+- Status tabs with counts: **All** (default) · Open · In review · Draft · Merged · Closed · No MR.
+- Toolbar: Only mine, More filters (assignee, target branch, type).
+- Only mine: the assignee matches my username or display name (case-insensitive), or a linked MR
+  is mine.
+- Table columns: ID, Title (+ sub-bug count pill), Type, Assignee (avatar + name), Status,
+  Linked MRs (count; opens a popover with the list), Updated. Below 1024px Type and Linked MRs
+  are hidden; below 768px Assignee and Updated too. Target branch, created date and notes are in
+  the drawer.
+- Chevron to expand/collapse sub-bugs, expand-all/collapse-all. Sub-bug rows are indented with a
+  subtle left guide line.
 - Clicking a row opens a right-side drawer with full details, linked MRs, editable
   notes (autosave, debounced), status override, and link/unlink MR.
 - "New task" button opens a dialog form with validation.
 
 ### Merge Requests page (`/merge-requests`)
-- Stat cards per status. Filter bar: provider, repo, status, author, assignee,
-  reviewer, target branch, search.
-- Virtualized table: provider icon, repo, !number / #number, title, author, reviewers
-  (avatar stack with approval state), status, source → target branch, age
-  ("3d ago", full date on hover), linked task.
-- "Sync now" button with last-synced time and per-repo errors in a popover.
+- Status tabs with counts: **Needs attention** (default) · All · Open · In review · Draft ·
+  Merged · Closed. The counts follow the other filters.
+- Toolbar: Only mine, More filters (provider, repository, author, assignee, reviewer,
+  target branch).
+- Only mine: I am the author, assignee or a reviewer.
+- Virtualized table, columns:
+  - **MR**: provider icon + short repo name + number in one cell (`backend !23`); the full path is
+    in a tooltip.
+  - **Title** (+ the attention reason chips in the Needs attention tab).
+  - **Author**: avatar + name.
+  - **Reviewers**: avatars with a state mark: ✓ approved, ✗ changes requested, ○ waiting; a
+    tooltip lists names and states. No reviewers shows "No reviewer" to screen readers and a dash.
+  - **Status** badge, **Target branch** (source → target on hover), **Updated**, **Linked task**.
+  - Hidden-column order as the screen narrows: Linked task and Target branch (< 1280px), Author
+    (< 1024px), Reviewers and Updated (< 768px). A chevron expands the row to show them.
+
+### Needs attention (rules live in `packages/shared`, fully unit tested)
+An open, draft or in-review MR needs attention when any of these is true:
+- **Waiting for your review**: the current user is a reviewer with state REQUESTED.
+- **Changes requested**: the current user is the author and any reviewer requested changes.
+- **No reviewer**: open, not a draft, and has no reviewers.
+- **Stale**: not updated for more than `STALE_DAYS` (env, default 7). The chip says "Stale 9d".
+
+If the current user is unknown, only "No reviewer" and "Stale" apply. Order: your review first,
+then changes requested, then no reviewer, then stale (oldest first). Empty state: "Nothing needs
+attention right now" with a link to All.
+
+### Who am I
+- The current user is the signed-in user (section 8, access control) matched to a git user by
+  provider + username.
+- In shared-password mode there is no personal login: the first time "Only mine" is switched on
+  the user picks themselves in a "Who are you?" dialog (search git users). The choice is kept in
+  `localStorage` (`mrdash.me`) and can be changed in the account menu.
+- The web app sends the git user id as `me` with the requests that need it.
 
 ### States and polish
 - Skeleton loaders that match the final layout (no layout shift).
@@ -357,7 +422,7 @@ All responses validated with shared Zod schemas. Errors use one shape:
 - Keyboard: `/` search, `j`/`k` move selection, `Enter` open drawer, `Esc` close,
   `e` expand/collapse row. Visible focus rings everywhere.
 - Accessibility: semantic table markup, aria-expanded on row toggles, labeled inputs,
-  full keyboard navigation, passes axe checks.
+  full keyboard navigation, passes axe checks in both themes.
 
 ---
 
@@ -469,6 +534,7 @@ GITLAB_WEBHOOK_SECRET=
 GITHUB_TOKEN=                # fine-grained, Pull requests: read, Metadata: read
 GITHUB_WEBHOOK_SECRET=
 SYNC_INTERVAL_MINUTES=5
+STALE_DAYS=7                 # MRs not updated for longer than this are "Stale"
 LOG_LEVEL=info
 ```
 

@@ -9,7 +9,8 @@ import type { Prisma } from '@prisma/client';
 import {
   countMergeRequests,
   countMergeRequestsByStatus,
-  listAllMergeRequests,
+  listAttentionCandidates,
+  listMergeRequestsByIds,
 } from '../repositories/mergeRequestRepository.js';
 import { decodeCursor, encodeCursor } from '../utils/cursor.js';
 import { AppError } from '../utils/errors.js';
@@ -41,8 +42,9 @@ export function attentionWhere(
 }
 
 /**
- * The attention list is bounded (only active MRs that match a rule), so it is sorted in
- * memory by the shared comparator and paged with an offset cursor.
+ * The attention list is bounded (only active MRs that match a rule), so it is ranked in memory
+ * from light rows by the shared comparator and paged with an offset cursor; only the requested
+ * page is loaded in full.
  */
 export async function listAttentionPage(
   f: MergeRequestFilters,
@@ -53,19 +55,36 @@ export async function listAttentionPage(
   if (!Number.isInteger(offset) || offset < 0) {
     throw AppError.badRequest('INVALID_CURSOR', 'Invalid pagination cursor');
   }
-  const rows = await listAllMergeRequests({
+  const candidates = await listAttentionCandidates({
     AND: [buildMergeRequestWhere(f), attentionWhere(f.me, staleDays, now)],
   });
-  const withReasons = rows
-    .map(toMergeRequest)
-    .map((mr) => ({ ...mr, reasons: getAttentionReasons(mr, f.me ?? null, staleDays, now) }))
-    .filter((mr) => mr.reasons.length > 0)
+  const ranked = candidates
+    .map((c) => ({
+      id: c.id,
+      updatedAtRemote: c.updatedAtRemote.toISOString(),
+      reasons: getAttentionReasons(
+        {
+          status: c.status,
+          isDraft: c.isDraft,
+          updatedAtRemote: c.updatedAtRemote.toISOString(),
+          author: { id: c.authorId },
+          reviewers: c.reviewers.map((r) => ({ user: { id: r.gitUserId }, state: r.state })),
+        },
+        f.me ?? null,
+        staleDays,
+        now,
+      ),
+    }))
+    .filter((c) => c.reasons.length > 0)
     .sort(compareAttention);
-  const items = withReasons.slice(offset, offset + f.limit);
-  const end = offset + items.length;
+
+  const pageRefs = ranked.slice(offset, offset + f.limit);
+  const reasonsById = new Map(pageRefs.map((c) => [c.id, c.reasons]));
+  const rows = await listMergeRequestsByIds(pageRefs.map((c) => c.id));
+  const end = offset + pageRefs.length;
   return {
-    items,
-    nextCursor: end < withReasons.length ? encodeCursor({ v: end, id: 'attention' }) : null,
+    items: rows.map((row) => ({ ...toMergeRequest(row), reasons: reasonsById.get(row.id) ?? [] })),
+    nextCursor: end < ranked.length ? encodeCursor({ v: end, id: 'attention' }) : null,
   };
 }
 

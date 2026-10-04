@@ -44,7 +44,14 @@ export function ReviewersCell({
   reviewers,
   max = 3,
 }: Pick<MergeRequest, 'reviewers'> & { max?: number }) {
-  if (reviewers.length === 0) return <span className="text-fg-muted">No reviewer</span>;
+  if (reviewers.length === 0) {
+    return (
+      <span title="No reviewer" className="text-fg-muted">
+        <span aria-hidden="true">–</span>
+        <span className="sr-only">No reviewer</span>
+      </span>
+    );
+  }
   const shown = reviewers.slice(0, max);
   const extra = reviewers.length - shown.length;
   return (
