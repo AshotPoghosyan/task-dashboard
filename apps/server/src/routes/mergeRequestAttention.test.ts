@@ -131,6 +131,33 @@ describe('GET /api/merge-requests?view=attention', () => {
     expect((await get('/api/merge-requests?view=attention&cursor=garbage')).statusCode).toBe(400);
   });
 
+  it('rejects negative, fractional and non-numeric offset cursors', async () => {
+    const enc = (v: unknown) =>
+      Buffer.from(JSON.stringify({ v, id: 'attention' })).toString('base64url');
+    for (const v of [-1, 1.5, 'abc']) {
+      const res = await get(`/api/merge-requests?view=attention&cursor=${enc(v)}`);
+      expect(res.statusCode).toBe(400);
+      expect(res.json().error.code).toBe('INVALID_CURSOR');
+    }
+  });
+
+  it('returns an empty page for an offset past the end', async () => {
+    await scenario();
+    const cursor = Buffer.from(JSON.stringify({ v: 100, id: 'attention' })).toString('base64url');
+    const res = await get(`/api/merge-requests?view=attention&cursor=${cursor}`);
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ items: [], nextCursor: null });
+  });
+
+  it('keeps the Needs attention badge equal to the list length', async () => {
+    const { me } = await scenario();
+    const items = await list(`view=attention&me=${me.id}`);
+    const counts = mergeRequestCountsSchema.parse(
+      (await get(`/api/merge-requests/counts?me=${me.id}`)).json(),
+    );
+    expect(counts.attention).toBe(items.length);
+  });
+
   it('leaves reasons out of the normal list', async () => {
     await scenario();
     const [first] = await list('');

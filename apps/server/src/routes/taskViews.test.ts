@@ -73,3 +73,36 @@ describe('GET /api/tasks/counts', () => {
     expect(await counts('?assignee=ann&status=OPEN')).toMatchObject({ all: 2, open: 1, merged: 1 });
   });
 });
+
+describe('task pagination cursor validation (regression)', () => {
+  const enc = (v: unknown) => Buffer.from(JSON.stringify({ v, id: 'x' })).toString('base64url');
+
+  it('rejects a numeric cursor for the default date sort', async () => {
+    const res = await get(`/api/tasks?cursor=${enc(5)}`);
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error.code).toBe('INVALID_CURSOR');
+  });
+
+  it('rejects an unparsable date and a string for the sortOrder sort', async () => {
+    expect((await get(`/api/tasks?cursor=${enc('not-a-date')}`)).statusCode).toBe(400);
+    expect((await get(`/api/tasks?sort=sortOrder&cursor=${enc('2026-01-01')}`)).statusCode).toBe(
+      400,
+    );
+  });
+
+  it('pages through tasks by Updated, newest first, without gaps or repeats', async () => {
+    for (let i = 0; i < 5; i++) {
+      await prisma().task.create({ data: { title: `t${i}`, type: 'TASK' } });
+    }
+    const seen: string[] = [];
+    let cursor: string | null = null;
+    do {
+      const res = await get(`/api/tasks?limit=2${cursor ? `&cursor=${cursor}` : ''}`);
+      expect(res.statusCode).toBe(200);
+      seen.push(...res.json().items.map((t: { title: string }) => t.title));
+      cursor = res.json().nextCursor;
+    } while (cursor);
+    expect(seen).toHaveLength(5);
+    expect(new Set(seen).size).toBe(5);
+  });
+});
