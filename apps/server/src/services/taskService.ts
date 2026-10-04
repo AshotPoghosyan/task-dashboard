@@ -1,6 +1,5 @@
-import type { CreateTaskInput, Task, TaskFilters, UpdateTaskInput } from '@mrdash/shared';
+import type { CreateTaskInput, Task, UpdateTaskInput } from '@mrdash/shared';
 import { aggregateTaskStatus } from '@mrdash/shared';
-import type { Prisma } from '@prisma/client';
 import type { Db } from '../repositories/db.js';
 import { inTransaction } from '../repositories/db.js';
 import { mergeRequestExists } from '../repositories/mergeRequestRepository.js';
@@ -11,48 +10,12 @@ import {
   findTaskCore,
   linkMr,
   lockTasks,
-  listTopLevelTasks,
   unlinkMr,
   updateTask as patchTask,
 } from '../repositories/taskRepository.js';
-import { decodeCursor, paginate } from '../utils/cursor.js';
 import { AppError } from '../utils/errors.js';
-import { escapeLike } from '../utils/search.js';
 import { toTask } from './mappers.js';
 import { recalculateTaskStatus } from './taskStatusService.js';
-
-function filterConditions(f: TaskFilters): Prisma.TaskWhereInput[] {
-  const conds: Prisma.TaskWhereInput[] = [];
-  if (f.status) conds.push({ status: { in: f.status } });
-  if (f.assignee) conds.push({ assigneeName: { in: f.assignee } });
-  if (f.targetBranch) conds.push({ targetBranch: { in: f.targetBranch } });
-  if (f.type) conds.push({ type: { in: f.type } });
-  if (f.q) conds.push({ title: { contains: escapeLike(f.q), mode: 'insensitive' } });
-  return conds;
-}
-
-/**
- * A top-level task is listed when it, or any of its sub-bugs, matches every filter;
- * it is always returned with all of its sub-bugs.
- */
-export function buildTaskWhere(f: TaskFilters): Prisma.TaskWhereInput {
-  const conds = filterConditions(f);
-  if (conds.length === 0) return { parentId: null };
-  const match: Prisma.TaskWhereInput = { AND: conds };
-  return { parentId: null, OR: [match, { children: { some: match } }] };
-}
-
-export async function listTasks(
-  f: TaskFilters,
-): Promise<{ items: Task[]; nextCursor: string | null }> {
-  const cursor = f.cursor ? decodeCursor(f.cursor) : null;
-  const after =
-    cursor && typeof cursor.v === 'number' ? { sortOrder: cursor.v, id: cursor.id } : null;
-  if (cursor && !after) throw AppError.badRequest('INVALID_CURSOR', 'Invalid pagination cursor');
-  const rows = await listTopLevelTasks(buildTaskWhere(f), after, f.limit + 1);
-  const page = paginate(rows, f.limit, (r) => ({ v: r.sortOrder, id: r.id }));
-  return { items: page.items.map(toTask), nextCursor: page.nextCursor };
-}
 
 export async function getTask(id: string): Promise<Task> {
   const row = await findTaskById(id);

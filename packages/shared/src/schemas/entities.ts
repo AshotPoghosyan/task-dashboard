@@ -42,6 +42,11 @@ export type Reviewer = z.infer<typeof reviewerSchema>;
 export const linkedTaskSchema = z.object({ id: z.string(), title: z.string() });
 export type LinkedTask = z.infer<typeof linkedTaskSchema>;
 
+export const attentionReasonSchema = z.object({
+  kind: z.enum(['REVIEW_REQUESTED', 'CHANGES_REQUESTED', 'NO_REVIEWER', 'STALE']),
+  days: z.number().int().nonnegative().optional(),
+});
+
 export const mergeRequestSchema = z.object({
   id: z.string(),
   repositoryId: z.string(),
@@ -63,6 +68,8 @@ export const mergeRequestSchema = z.object({
   mergedAt: isoDate.nullable(),
   closedAt: isoDate.nullable(),
   tasks: z.array(linkedTaskSchema),
+  /** Why this needs attention; only filled in by the `view=attention` list. */
+  reasons: z.array(attentionReasonSchema).optional(),
 });
 export type MergeRequest = z.infer<typeof mergeRequestSchema>;
 
@@ -113,6 +120,30 @@ export const statsSchema = z.object({
   closedThisWeek: z.number().int().nonnegative(),
 });
 export type Stats = z.infer<typeof statsSchema>;
+
+/** Tab badges on the Merge Requests page (same filters as the list, ignoring status). */
+export const mergeRequestCountsSchema = z.object({
+  attention: z.number().int().nonnegative(),
+  all: z.number().int().nonnegative(),
+  open: z.number().int().nonnegative(),
+  inReview: z.number().int().nonnegative(),
+  draft: z.number().int().nonnegative(),
+  merged: z.number().int().nonnegative(),
+  closed: z.number().int().nonnegative(),
+});
+export type MergeRequestCounts = z.infer<typeof mergeRequestCountsSchema>;
+
+/** Tab badges on the Tasks page; `noMr` counts tasks without a merge request. */
+export const taskCountsSchema = z.object({
+  all: z.number().int().nonnegative(),
+  open: z.number().int().nonnegative(),
+  inReview: z.number().int().nonnegative(),
+  draft: z.number().int().nonnegative(),
+  merged: z.number().int().nonnegative(),
+  closed: z.number().int().nonnegative(),
+  noMr: z.number().int().nonnegative(),
+});
+export type TaskCounts = z.infer<typeof taskCountsSchema>;
 
 export const repositoryListSchema = z.object({ items: z.array(repositorySchema) });
 

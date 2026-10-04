@@ -1,4 +1,4 @@
-import type { Prisma } from '@prisma/client';
+import type { MrStatus, Prisma } from '@prisma/client';
 import { getPrisma } from '../db/prisma.js';
 import type { Db } from './db.js';
 
@@ -33,4 +33,28 @@ export function listMergeRequests(
 
 export async function mergeRequestExists(id: string, db: Db): Promise<boolean> {
   return (await db.mergeRequest.count({ where: { id } })) > 0;
+}
+
+/** Every row matching `where`, newest update first. Used by the bounded "needs attention" set. */
+export function listAllMergeRequests(where: Prisma.MergeRequestWhereInput) {
+  return getPrisma().mergeRequest.findMany({
+    where,
+    orderBy: [{ updatedAtRemote: 'desc' }, { id: 'desc' }],
+    include: mrInclude,
+  });
+}
+
+export function countMergeRequests(where: Prisma.MergeRequestWhereInput): Promise<number> {
+  return getPrisma().mergeRequest.count({ where });
+}
+
+export async function countMergeRequestsByStatus(
+  where: Prisma.MergeRequestWhereInput,
+): Promise<Partial<Record<MrStatus, number>>> {
+  const rows = await getPrisma().mergeRequest.groupBy({
+    by: ['status'],
+    where,
+    _count: { _all: true },
+  });
+  return Object.fromEntries(rows.map((r) => [r.status, r._count._all]));
 }

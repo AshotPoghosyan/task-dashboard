@@ -36,6 +36,8 @@ const envSchema = z
     GITLAB_WEBHOOK_SECRET: z.string().default(''),
     GITHUB_TOKEN: z.string().default(''),
     GITHUB_WEBHOOK_SECRET: z.string().default(''),
+    /** A draft/open/in-review MR not updated for longer than this many days is "Stale". */
+    STALE_DAYS: z.coerce.number().int().positive().default(7),
     SYNC_INTERVAL_MINUTES: z.coerce.number().int().positive().default(5),
     RATE_LIMIT_MAX: z.coerce.number().int().positive().default(300),
     /** Reverse proxies in front of the API whose X-Forwarded-For is trusted (0 = none). */

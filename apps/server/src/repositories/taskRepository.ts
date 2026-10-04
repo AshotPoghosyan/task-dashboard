@@ -33,25 +33,26 @@ export function findTaskById(id: string, db: Db = getPrisma()): Promise<TaskRow 
   return db.task.findUnique({ where: { id }, include: taskInclude });
 }
 
-/** Top-level tasks, ordered by (sortOrder, id), after the keyset position `after`. */
+/** Top-level tasks matching `where`, in the given order (callers add the keyset position). */
 export function listTopLevelTasks(
   where: Prisma.TaskWhereInput,
-  after: { sortOrder: number; id: string } | null,
+  orderBy: Prisma.TaskOrderByWithRelationInput[],
   take: number,
 ): Promise<TaskRow[]> {
-  const keyset: Prisma.TaskWhereInput = after
-    ? {
-        OR: [
-          { sortOrder: { gt: after.sortOrder } },
-          { sortOrder: after.sortOrder, id: { gt: after.id } },
-        ],
-      }
-    : {};
-  return getPrisma().task.findMany({
-    where: { AND: [where, keyset] },
-    orderBy: childOrder,
-    take,
-    include: taskInclude,
+  return getPrisma().task.findMany({ where, orderBy, take, include: taskInclude });
+}
+
+export async function countTasksByStatus(
+  where: Prisma.TaskWhereInput,
+): Promise<Partial<Record<TaskStatus, number>>> {
+  const rows = await getPrisma().task.groupBy({ by: ['status'], where, _count: { _all: true } });
+  return Object.fromEntries(rows.map((r) => [r.status, r._count._all]));
+}
+
+export function findGitUser(id: string) {
+  return getPrisma().gitUser.findUnique({
+    where: { id },
+    select: { username: true, displayName: true },
   });
 }
 

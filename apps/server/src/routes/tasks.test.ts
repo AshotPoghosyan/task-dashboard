@@ -290,7 +290,16 @@ describe('GET /api/tasks', () => {
     const a = await create({ title: 'a' });
     const b = await create({ title: 'b' });
     await app.inject({ method: 'PATCH', url: `/api/tasks/${b.id}`, payload: { sortOrder: -1 } });
-    expect(ids(await get())).toEqual([b.id, a.id]);
+    expect(ids(await get('?sort=sortOrder&order=asc'))).toEqual([b.id, a.id]);
+  });
+
+  it('sorts by most recently updated first by default', async () => {
+    const a = await create({ title: 'a' });
+    const b = await create({ title: 'b' });
+    await app.inject({ method: 'PATCH', url: `/api/tasks/${a.id}`, payload: { notes: 'touched' } });
+    expect(ids(await get())).toEqual([a.id, b.id]);
+    expect(ids(await get('?sort=updatedAt&order=asc'))).toEqual([b.id, a.id]);
+    expect(ids(await get('?sort=createdAt&order=asc'))).toEqual([a.id, b.id]);
   });
 
   it('rejects invalid query params and cursors', async () => {
