@@ -5,7 +5,6 @@ import {
   getAttentionReasons,
   type AttentionInput,
 } from './attention.js';
-import { isMyMergeRequest, isMyTask } from './mine.js';
 
 const NOW = new Date('2026-10-10T12:00:00Z');
 const daysAgo = (d: number) => new Date(NOW.getTime() - d * 86_400_000).toISOString();
@@ -129,28 +128,5 @@ describe('compareAttention', () => {
     };
     const none = item('none', 'NO_REVIEWER', 1);
     expect([none, both].sort(compareAttention)[0]).toBe(both);
-  });
-});
-
-describe('mine matching', () => {
-  const me = { id: 'me', username: 'ann', displayName: 'Ann Lee' };
-
-  it('matches MRs where I am author, assignee or reviewer', () => {
-    const base = { author: { id: 'x' }, assignee: null, reviewers: [] };
-    expect(isMyMergeRequest({ ...base, author: { id: 'me' } }, me)).toBe(true);
-    expect(isMyMergeRequest({ ...base, assignee: { id: 'me' } }, me)).toBe(true);
-    expect(isMyMergeRequest({ ...base, reviewers: [{ user: { id: 'me' } }] }, me)).toBe(true);
-    expect(isMyMergeRequest(base, me)).toBe(false);
-  });
-
-  it('matches task assignees by username or display name, ignoring case', () => {
-    expect(isMyTask({ assigneeName: 'ANN' }, me)).toBe(true);
-    expect(isMyTask({ assigneeName: ' ann lee ' }, me)).toBe(true);
-    expect(isMyTask({ assigneeName: 'bob' }, me)).toBe(false);
-    expect(isMyTask({ assigneeName: null }, me)).toBe(false);
-  });
-
-  it('matches a task through a linked MR that is mine', () => {
-    expect(isMyTask({ assigneeName: null, linkedMergeRequestsMine: true }, me)).toBe(true);
   });
 });

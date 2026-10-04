@@ -63,7 +63,7 @@ export async function listTasks(
     const invalid =
       column === 'sortOrder'
         ? typeof v !== 'number'
-        : (value as Date).toString() === 'Invalid Date';
+        : typeof v !== 'string' || Number.isNaN((value as Date).getTime());
     if (invalid) throw AppError.badRequest('INVALID_CURSOR', 'Invalid pagination cursor');
     clauses.push({
       OR: [{ [column]: { [cmp]: value } }, { [column]: value, id: { [cmp]: id } }],

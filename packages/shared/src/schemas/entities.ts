@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ATTENTION_KINDS } from '../attention/attention.js';
 import {
   mrStatusSchema,
   providerSchema,
@@ -43,7 +44,7 @@ export const linkedTaskSchema = z.object({ id: z.string(), title: z.string() });
 export type LinkedTask = z.infer<typeof linkedTaskSchema>;
 
 export const attentionReasonSchema = z.object({
-  kind: z.enum(['REVIEW_REQUESTED', 'CHANGES_REQUESTED', 'NO_REVIEWER', 'STALE']),
+  kind: z.enum(ATTENTION_KINDS),
   days: z.number().int().nonnegative().optional(),
 });
 
